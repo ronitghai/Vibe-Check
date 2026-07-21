@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Rapid Quiz</title>
+<style>
+  .wrap { text-align: center; width: 420px; max-width: 100%; }
+  #progress { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+  .timerbar { height: 6px; background: var(--surface); border-radius: 3px; overflow: hidden; margin-bottom: 16px; }
+  .timerfill { height: 100%; background: var(--accent); width: 100%; transition: width .1s linear; }
+  #question { font-size: 17px; font-weight: 600; margin-bottom: 16px; min-height: 44px; }
+  .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .choice {
+    padding: 12px; border-radius: var(--radius); background: var(--surface); border: 2px solid transparent;
+    cursor: pointer; font-size: 14px; text-align: left;
+  }
+  .choice:hover { background: var(--surface-2); }
+  .choice.correct { background: var(--success-bg); border-color: var(--success); }
+  .choice.wrong { background: var(--danger-bg); border-color: var(--danger); }
+  #score { margin-top: 16px; font-size: 14px; color: var(--text-muted); }
+  #final { display: none; font-size: 18px; margin-top: 10px; }
+  #restart { margin-top: 14px; display: none; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="game-title">Rapid Quiz</h1>
+    <div id="progress"></div>
+    <div class="timerbar"><div class="timerfill" id="timerfill"></div></div>
+    <div id="question"></div>
+    <div class="choices" id="choices"></div>
+    <div id="score"></div>
+    <div id="final"></div>
+    <button id="restart" class="btn">Play again</button>
+  </div>
+
+<script>
+(function () {
+  var CONFIG = window.__CONFIG__ || {};
+  var questions = (CONFIG.questions && CONFIG.questions.length) ? CONFIG.questions : [
+    { question: "2 + 2 = ?", choices: ["3", "4", "5", "6"], answerIndex: 1 }
+  ];
+  var timePerQuestion = CONFIG.timePerQuestion || 15;
+
+  var progressEl = document.getElementById("progress");
+  var timerfillEl = document.getElementById("timerfill");
+  var questionEl = document.getElementById("question");
+  var choicesEl = document.getElementById("choices");
+  var scoreEl = document.getElementById("score");
+  var finalEl = document.getElementById("final");
+  var restartBtn = document.getElementById("restart");
+
+  var qIndex, score, streak, locked, timeLeft, timerHandle;
+
+  function renderQuestion() {
+    var q = questions[qIndex];
+    progressEl.textContent = "Question " + (qIndex + 1) + " / " + questions.length;
+    questionEl.textContent = q.question;
+    scoreEl.textContent = "Score: " + score + (streak > 1 ? "  •  Streak x" + streak : "");
+    choicesEl.innerHTML = "";
+    locked = false;
+
+    q.choices.forEach(function (choice, idx) {
+      var btn = document.createElement("div");
+      btn.className = "choice";
+      btn.textContent = choice;
+      btn.addEventListener("click", function () { answer(idx); });
+      choicesEl.appendChild(btn);
+    });
+
+    timeLeft = timePerQuestion;
+    timerfillEl.style.width = "100%";
+    clearInterval(timerHandle);
+    timerHandle = setInterval(function () {
+      timeLeft -= 0.1;
+      timerfillEl.style.width = Math.max(0, (timeLeft / timePerQuestion) * 100) + "%";
+      if (timeLeft <= 0) {
+        clearInterval(timerHandle);
+        answer(-1);
+      }
+    }, 100);
+  }
+
+  function answer(idx) {
+    if (locked) return;
+    locked = true;
+    clearInterval(timerHandle);
+
+    var q = questions[qIndex];
+    var buttons = choicesEl.children;
+    for (var i = 0; i < buttons.length; i++) {
+      if (i === q.answerIndex) buttons[i].classList.add("correct");
+      else if (i === idx) buttons[i].classList.add("wrong");
+    }
+
+    if (idx === q.answerIndex) {
+      streak++;
+      var speedBonus = Math.max(0, Math.round((timeLeft / timePerQuestion) * 50));
+      score += 50 + speedBonus;
+    } else {
+      streak = 0;
+    }
+
+    setTimeout(function () {
+      qIndex++;
+      if (qIndex < questions.length) renderQuestion();
+      else finish();
+    }, 900);
+  }
+
+  function finish() {
+    questionEl.textContent = "";
+    choicesEl.innerHTML = "";
+    progressEl.textContent = "Quiz complete!";
+    timerfillEl.style.width = "0%";
+    finalEl.style.display = "block";
+    finalEl.textContent = "Final score: " + score + " 🎉";
+    scoreEl.textContent = "";
+    restartBtn.style.display = "inline-block";
+  }
+
+  function start() {
+    qIndex = 0;
+    score = 0;
+    streak = 0;
+    finalEl.style.display = "none";
+    restartBtn.style.display = "none";
+    renderQuestion();
+  }
+
+  restartBtn.addEventListener("click", start);
+  start();
+})();
+</script>
+</body>
+</html>

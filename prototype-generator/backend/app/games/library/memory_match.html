@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Memory Match</title>
+<style>
+  .wrap { text-align: center; }
+  .grid { display: grid; gap: 8px; justify-content: center; }
+  .card {
+    width: 64px; height: 64px; border-radius: var(--radius); background: var(--surface);
+    display: flex; align-items: center; justify-content: center; font-size: 28px;
+    cursor: pointer; user-select: none; transition: transform .15s;
+  }
+  .card.face { background: var(--surface-2); }
+  .card.matched { background: var(--success-bg); cursor: default; }
+  #restart { margin-top: 16px; display: none; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="game-title">Memory Match</h1>
+    <div id="theme" class="game-meta"></div>
+    <div id="stats" class="game-status"></div>
+    <div class="grid" id="grid"></div>
+    <button id="restart" class="btn">Play again</button>
+  </div>
+
+<script>
+(function () {
+  var CONFIG = window.__CONFIG__ || {};
+  var theme = CONFIG.theme || "Animals";
+  var icons = (CONFIG.icons && CONFIG.icons.length >= 3 ? CONFIG.icons : ["🐶","🐱","🦊","🐼","🐸","🐵","🦁","🐷"]).slice(0, 10);
+
+  var themeEl = document.getElementById("theme");
+  var statsEl = document.getElementById("stats");
+  var gridEl = document.getElementById("grid");
+  var restartBtn = document.getElementById("restart");
+
+  var cards, flipped, matchedCount, moves, lock;
+  var cols = Math.min(6, Math.ceil(Math.sqrt(icons.length * 2)));
+
+  function shuffle(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+
+  function render() {
+    gridEl.style.gridTemplateColumns = "repeat(" + cols + ", 64px)";
+    gridEl.innerHTML = "";
+    cards.forEach(function (card, idx) {
+      var el = document.createElement("div");
+      el.className = "card" + (card.matched ? " matched" : card.up ? " face" : "");
+      el.textContent = (card.up || card.matched) ? card.icon : "?";
+      el.addEventListener("click", function () { onFlip(idx); });
+      gridEl.appendChild(el);
+    });
+    statsEl.textContent = "Moves: " + moves + "  •  Pairs: " + matchedCount + " / " + icons.length;
+  }
+
+  function onFlip(idx) {
+    if (lock || cards[idx].up || cards[idx].matched) return;
+    cards[idx].up = true;
+    flipped.push(idx);
+    render();
+
+    if (flipped.length === 2) {
+      moves++;
+      lock = true;
+      var a = cards[flipped[0]], b = cards[flipped[1]];
+      if (a.icon === b.icon) {
+        a.matched = b.matched = true;
+        matchedCount++;
+        flipped = [];
+        lock = false;
+        render();
+        if (matchedCount === icons.length) finish();
+      } else {
+        setTimeout(function () {
+          a.up = b.up = false;
+          flipped = [];
+          lock = false;
+          render();
+        }, 700);
+      }
+    }
+  }
+
+  function finish() {
+    statsEl.textContent = "Solved in " + moves + " moves! 🎉";
+    restartBtn.style.display = "inline-block";
+  }
+
+  function start() {
+    var deck = shuffle(icons.concat(icons).map(function (icon) { return { icon: icon, up: false, matched: false }; }));
+    cards = shuffle(deck);
+    flipped = [];
+    matchedCount = 0;
+    moves = 0;
+    lock = false;
+    themeEl.textContent = "Theme: " + theme;
+    restartBtn.style.display = "none";
+    render();
+  }
+
+  restartBtn.addEventListener("click", start);
+  start();
+})();
+</script>
+</body>
+</html>

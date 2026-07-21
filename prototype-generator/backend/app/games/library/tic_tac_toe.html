@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Tic-Tac-Toe</title>
+<style>
+  .wrap { text-align: center; }
+  .board {
+    display: grid; grid-template-columns: repeat(3, 84px); grid-template-rows: repeat(3, 84px);
+    gap: 6px; background: var(--surface); padding: 6px; border-radius: 12px;
+  }
+  .cell {
+    background: var(--bg); border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-size: 40px; font-weight: 700; cursor: pointer; user-select: none; transition: background .15s;
+  }
+  .cell:hover { background: var(--surface); }
+  .cell.x { color: var(--accent); }
+  .cell.o { color: var(--danger); }
+  .cell.win { background: var(--success-bg); }
+  #restart { margin-top: 18px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="game-title">Tic-Tac-Toe</h1>
+    <div id="status" class="game-status">Your turn</div>
+    <div id="board" class="board"></div>
+    <button id="restart" class="btn">Restart</button>
+  </div>
+
+<script>
+(function () {
+  var CONFIG = window.__CONFIG__ || {};
+  var difficulty = CONFIG.difficulty || "medium";
+  var playerSymbol = CONFIG.playerSymbol === "O" ? "O" : "X";
+  var aiSymbol = playerSymbol === "X" ? "O" : "X";
+
+  var boardEl = document.getElementById("board");
+  var statusEl = document.getElementById("status");
+  var restartBtn = document.getElementById("restart");
+
+  var board, over, winLine;
+
+  var LINES = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+
+  function emptyCells(b) {
+    var out = [];
+    for (var i = 0; i < 9; i++) if (!b[i]) out.push(i);
+    return out;
+  }
+
+  function checkWinner(b) {
+    for (var i = 0; i < LINES.length; i++) {
+      var l = LINES[i];
+      if (b[l[0]] && b[l[0]] === b[l[1]] && b[l[1]] === b[l[2]]) {
+        return { symbol: b[l[0]], line: l };
+      }
+    }
+    if (emptyCells(b).length === 0) return { symbol: "draw", line: null };
+    return null;
+  }
+
+  function minimax(b, turn) {
+    var result = checkWinner(b);
+    if (result) {
+      if (result.symbol === aiSymbol) return { score: 10 };
+      if (result.symbol === playerSymbol) return { score: -10 };
+      return { score: 0 };
+    }
+    var moves = [];
+    var cells = emptyCells(b);
+    for (var i = 0; i < cells.length; i++) {
+      var idx = cells[i];
+      b[idx] = turn;
+      var res = minimax(b, turn === aiSymbol ? playerSymbol : aiSymbol);
+      moves.push({ index: idx, score: res.score });
+      b[idx] = null;
+    }
+    var best = moves[0];
+    for (var j = 1; j < moves.length; j++) {
+      if (turn === aiSymbol) { if (moves[j].score > best.score) best = moves[j]; }
+      else { if (moves[j].score < best.score) best = moves[j]; }
+    }
+    return best;
+  }
+
+  function aiMove() {
+    var cells = emptyCells(board);
+    if (cells.length === 0) return;
+
+    var useRandom = difficulty === "easy"
+      ? true
+      : difficulty === "medium"
+        ? Math.random() < 0.5
+        : false;
+
+    var idx;
+    if (useRandom) {
+      idx = cells[Math.floor(Math.random() * cells.length)];
+    } else {
+      idx = minimax(board.slice(), aiSymbol).index;
+    }
+    board[idx] = aiSymbol;
+  }
+
+  function render() {
+    boardEl.innerHTML = "";
+    for (var i = 0; i < 9; i++) {
+      var cell = document.createElement("div");
+      cell.className = "cell" + (board[i] === "X" ? " x" : board[i] === "O" ? " o" : "");
+      if (winLine && winLine.indexOf(i) !== -1) cell.className += " win";
+      cell.textContent = board[i] || "";
+      cell.addEventListener("click", function (idx) {
+        return function () { onCellClick(idx); };
+      }(i));
+      boardEl.appendChild(cell);
+    }
+  }
+
+  function onCellClick(idx) {
+    if (over || board[idx]) return;
+    board[idx] = playerSymbol;
+    var result = checkWinner(board);
+    if (result) return finish(result);
+
+    statusEl.textContent = "AI thinking...";
+    render();
+    setTimeout(function () {
+      aiMove();
+      var res2 = checkWinner(board);
+      render();
+      if (res2) finish(res2);
+      else statusEl.textContent = "Your turn";
+    }, 250);
+  }
+
+  function finish(result) {
+    over = true;
+    winLine = result.line;
+    if (result.symbol === "draw") statusEl.textContent = "It's a draw!";
+    else if (result.symbol === playerSymbol) statusEl.textContent = "You win! 🎉";
+    else statusEl.textContent = "AI wins!";
+    render();
+  }
+
+  function start() {
+    board = new Array(9).fill(null);
+    over = false;
+    winLine = null;
+    statusEl.textContent = "Your turn";
+    render();
+    if (playerSymbol === "O") {
+      setTimeout(function () {
+        aiMove();
+        render();
+      }, 200);
+    }
+  }
+
+  restartBtn.addEventListener("click", start);
+  start();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Wheel of Fortune</title>
+<style>
+  .wrap { text-align: center; max-width: 520px; }
+  #category { color: var(--accent); font-size: 13px; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px; }
+  #phrase { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 14px; }
+  .letter-box {
+    width: 30px; height: 38px; border-bottom: 3px solid var(--surface-2); display: flex;
+    align-items: center; justify-content: center; font-size: 22px; font-weight: 700;
+  }
+  .letter-box.space { border-bottom: none; width: 16px; }
+  #guesses { margin-bottom: 14px; font-size: 13px; color: var(--danger); }
+  .keyboard { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; max-width: 480px; }
+  .key {
+    width: 32px; height: 36px; border-radius: 6px; border: none; background: var(--surface);
+    color: var(--text); font-weight: 700; cursor: pointer; font-size: 14px;
+  }
+  .key:hover:not(:disabled) { background: var(--surface-2); }
+  .key:disabled { opacity: 0.35; cursor: default; }
+  .key.correct { background: var(--success); }
+  .key.wrong { background: var(--danger-bg); }
+  #restart { margin-top: 16px; display: none; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="game-title">Wheel of Fortune</h1>
+    <div id="category" class="game-meta"></div>
+    <div id="phrase"></div>
+    <div id="status" class="game-status">Guess a letter</div>
+    <div id="guesses"></div>
+    <div class="keyboard" id="keyboard"></div>
+    <button id="restart" class="btn">Play again</button>
+  </div>
+
+<script>
+(function () {
+  var CONFIG = window.__CONFIG__ || {};
+  var phrase = (CONFIG.phrase || "PYTHON PROGRAMMING").toUpperCase();
+  var category = CONFIG.category || "General";
+  var maxGuesses = CONFIG.maxGuesses || 8;
+
+  var categoryEl = document.getElementById("category");
+  var phraseEl = document.getElementById("phrase");
+  var statusEl = document.getElementById("status");
+  var guessesEl = document.getElementById("guesses");
+  var keyboardEl = document.getElementById("keyboard");
+  var restartBtn = document.getElementById("restart");
+
+  var revealed, wrongLeft, over, keyEls;
+
+  function letters() {
+    return phrase.split("").filter(function (c) { return /[A-Z]/.test(c); });
+  }
+
+  function renderPhrase(showAll) {
+    phraseEl.innerHTML = "";
+    phrase.split("").forEach(function (ch) {
+      var box = document.createElement("div");
+      if (ch === " ") {
+        box.className = "letter-box space";
+      } else {
+        box.className = "letter-box";
+        box.textContent = showAll || revealed[ch] ? ch : "";
+      }
+      phraseEl.appendChild(box);
+    });
+  }
+
+  function renderKeyboard() {
+    keyboardEl.innerHTML = "";
+    keyEls = {};
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach(function (letter) {
+      var btn = document.createElement("button");
+      btn.className = "key";
+      btn.textContent = letter;
+      btn.addEventListener("click", function () { guess(letter); });
+      keyboardEl.appendChild(btn);
+      keyEls[letter] = btn;
+    });
+  }
+
+  function guess(letter) {
+    if (over || keyEls[letter].disabled) return;
+    keyEls[letter].disabled = true;
+
+    if (phrase.indexOf(letter) !== -1) {
+      revealed[letter] = true;
+      keyEls[letter].classList.add("correct");
+    } else {
+      wrongLeft -= 1;
+      keyEls[letter].classList.add("wrong");
+    }
+
+    renderPhrase(false);
+    guessesEl.textContent = "Wrong guesses left: " + wrongLeft;
+
+    var allRevealed = letters().every(function (l) { return revealed[l]; });
+    if (allRevealed) return finish(true);
+    if (wrongLeft <= 0) return finish(false);
+  }
+
+  function finish(won) {
+    over = true;
+    renderPhrase(true);
+    statusEl.textContent = won ? "You solved it! 🎉" : "Out of guesses!";
+    restartBtn.style.display = "inline-block";
+    Object.keys(keyEls).forEach(function (l) { keyEls[l].disabled = true; });
+  }
+
+  function onKeydown(e) {
+    var letter = (e.key || "").toUpperCase();
+    if (/^[A-Z]$/.test(letter)) guess(letter);
+  }
+
+  function start() {
+    revealed = {};
+    wrongLeft = maxGuesses;
+    over = false;
+    categoryEl.textContent = "Category: " + category;
+    statusEl.textContent = "Guess a letter";
+    guessesEl.textContent = "Wrong guesses left: " + wrongLeft;
+    restartBtn.style.display = "none";
+    renderKeyboard();
+    renderPhrase(false);
+  }
+
+  restartBtn.addEventListener("click", start);
+  document.addEventListener("keydown", onKeydown);
+  start();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Crossword</title>
+<style>
+  .wrap { text-align: center; max-width: 480px; }
+  .clue-row { margin-bottom: 16px; text-align: left; }
+  .clue { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
+  .clue b { color: var(--accent); }
+  .boxes { display: flex; gap: 4px; }
+  .box {
+    width: 30px; height: 34px; text-align: center; font-size: 16px; font-weight: 700;
+    text-transform: uppercase; background: var(--surface); border: 2px solid var(--border); border-radius: 4px;
+    color: var(--text);
+  }
+  .box.correct { border-color: var(--success); background: var(--success-bg); }
+  .box.wrong { border-color: var(--danger); }
+  #check { margin-top: 8px; }
+  #status { margin-top: 12px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="game-title">Crossword</h1>
+    <div id="clues"></div>
+    <button id="check" class="btn">Check answers</button>
+    <div id="status" class="game-status"></div>
+  </div>
+
+<script>
+(function () {
+  var CONFIG = window.__CONFIG__ || {};
+  var words = (CONFIG.words && CONFIG.words.length) ? CONFIG.words : [
+    { word: "PYTHON", clue: "A popular programming language" },
+    { word: "CODE", clue: "What developers write" },
+    { word: "BUG", clue: "An error in a program" }
+  ];
+
+  var cluesEl = document.getElementById("clues");
+  var checkBtn = document.getElementById("check");
+  var statusEl = document.getElementById("status");
+
+  var inputs = [];
+
+  function render() {
+    cluesEl.innerHTML = "";
+    inputs = [];
+    words.forEach(function (w, wi) {
+      var word = (w.word || "").toUpperCase().replace(/[^A-Z]/g, "");
+      var row = document.createElement("div");
+      row.className = "clue-row";
+
+      var clue = document.createElement("div");
+      clue.className = "clue";
+      clue.innerHTML = "<b>" + (wi + 1) + ".</b> " + (w.clue || "") + " (" + word.length + " letters)";
+      row.appendChild(clue);
+
+      var boxes = document.createElement("div");
+      boxes.className = "boxes";
+      var rowInputs = [];
+      for (var i = 0; i < word.length; i++) {
+        var box = document.createElement("input");
+        box.className = "box";
+        box.maxLength = 1;
+        box.addEventListener("input", function () {
+          box.value = box.value.toUpperCase().replace(/[^A-Z]/g, "");
+          if (box.value && box.nextBox) box.nextBox.focus();
+        });
+        boxes.appendChild(box);
+        rowInputs.push(box);
+      }
+      for (var j = 0; j < rowInputs.length - 1; j++) rowInputs[j].nextBox = rowInputs[j + 1];
+
+      row.appendChild(boxes);
+      cluesEl.appendChild(row);
+      inputs.push({ word: word, boxes: rowInputs });
+    });
+  }
+
+  function check() {
+    var allCorrect = true;
+    inputs.forEach(function (entry) {
+      entry.boxes.forEach(function (box, i) {
+        var ok = box.value === entry.word[i];
+        box.classList.toggle("correct", ok);
+        box.classList.toggle("wrong", !ok && box.value !== "");
+        if (!ok) allCorrect = false;
+      });
+    });
+    statusEl.textContent = allCorrect ? "All correct! 🎉" : "Some letters aren't right yet — keep trying.";
+  }
+
+  checkBtn.addEventListener("click", check);
+  render();
+})();
+</script>
+</body>
+</html>

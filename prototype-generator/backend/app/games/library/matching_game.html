@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Matching Game</title>
+<style>
+  .wrap { text-align: center; }
+  .columns { display: flex; gap: 28px; justify-content: center; }
+  .col { display: flex; flex-direction: column; gap: 8px; width: 150px; }
+  .item {
+    padding: 10px 12px; border-radius: var(--radius); background: var(--surface); cursor: pointer;
+    font-size: 14px; user-select: none; border: 2px solid transparent; transition: background .15s;
+  }
+  .item:hover { background: var(--surface-2); }
+  .item.selected { border-color: var(--accent); }
+  .item.correct { background: var(--success-bg); border-color: var(--success); cursor: default; }
+  .item.wrong { background: var(--danger-bg); border-color: var(--danger); }
+  #restart { margin-top: 18px; display: none; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 id="title" class="game-title">Matching Game</h1>
+    <div id="stats" class="game-status"></div>
+    <div class="columns">
+      <div class="col" id="leftCol"></div>
+      <div class="col" id="rightCol"></div>
+    </div>
+    <button id="restart" class="btn">Play again</button>
+  </div>
+
+<script>
+(function () {
+  var CONFIG = window.__CONFIG__ || {};
+  var title = CONFIG.title || "Match the pairs";
+  var pairs = (CONFIG.pairs && CONFIG.pairs.length >= 2) ? CONFIG.pairs : [
+    { left: "Sun", right: "Star" },
+    { left: "Dog", right: "Bark" },
+    { left: "Cat", right: "Meow" },
+    { left: "Cow", right: "Moo" }
+  ];
+
+  var titleEl = document.getElementById("title");
+  var statsEl = document.getElementById("stats");
+  var leftCol = document.getElementById("leftCol");
+  var rightCol = document.getElementById("rightCol");
+  var restartBtn = document.getElementById("restart");
+
+  var leftItems, rightItems, selectedLeft, selectedRight, matched, mistakes;
+
+  function shuffle(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+
+  function render() {
+    leftCol.innerHTML = "";
+    rightCol.innerHTML = "";
+
+    leftItems.forEach(function (item) {
+      var el = document.createElement("div");
+      el.className = "item" + (matched[item.id] ? " correct" : selectedLeft === item.id ? " selected" : "");
+      el.textContent = item.text;
+      if (!matched[item.id]) el.addEventListener("click", function () { pick("left", item.id); });
+      leftCol.appendChild(el);
+    });
+
+    rightItems.forEach(function (item) {
+      var el = document.createElement("div");
+      el.className = "item" + (matched[item.id] ? " correct" : selectedRight === item.id ? " selected" : "");
+      el.textContent = item.text;
+      if (!matched[item.id]) el.addEventListener("click", function () { pick("right", item.id); });
+      rightCol.appendChild(el);
+    });
+
+    var doneCount = Object.keys(matched).filter(function (k) { return matched[k]; }).length / 2;
+    statsEl.textContent = "Matched: " + doneCount + " / " + pairs.length + "  •  Mistakes: " + mistakes;
+  }
+
+  function pick(side, id) {
+    if (side === "left") selectedLeft = id; else selectedRight = id;
+    render();
+
+    if (selectedLeft != null && selectedRight != null) {
+      var isMatch = selectedLeft === selectedRight;
+      if (isMatch) {
+        matched[selectedLeft] = true;
+        matched["r" + selectedRight] = true;
+        selectedLeft = selectedRight = null;
+        render();
+        var doneCount = Object.keys(matched).filter(function (k) { return matched[k]; }).length / 2;
+        if (doneCount === pairs.length) finish();
+      } else {
+        mistakes++;
+        setTimeout(function () {
+          selectedLeft = selectedRight = null;
+          render();
+        }, 500);
+      }
+    }
+  }
+
+  function finish() {
+    statsEl.textContent = "All matched with " + mistakes + " mistakes! 🎉";
+    restartBtn.style.display = "inline-block";
+  }
+
+  function start() {
+    leftItems = pairs.map(function (p, i) { return { id: i, text: p.left }; });
+    rightItems = shuffle(pairs.map(function (p, i) { return { id: i, text: p.right }; }));
+    leftItems = shuffle(leftItems.slice());
+    selectedLeft = selectedRight = null;
+    matched = {};
+    mistakes = 0;
+    titleEl.textContent = title;
+    restartBtn.style.display = "none";
+    render();
+  }
+
+  restartBtn.addEventListener("click", start);
+  start();
+})();
+</script>
+</body>
+</html>

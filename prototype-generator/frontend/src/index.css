@@ -1,0 +1,37 @@
+/*
+  Same palette as the shared game design system injected server-side
+  (backend/app/games/bundle.py, DESIGN_SYSTEM_CSS) — kept in sync by hand so
+  the app chrome and every game (template or generated) read as one system.
+*/
+:root {
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --surface-2: #334155;
+  --border: #334155;
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --accent: #38bdf8;
+  --accent-strong: #7dd3fc;
+  --success: #22c55e;
+  --success-bg: #14532d;
+  --danger: #f87171;
+  --danger-bg: #7f1d1d;
+  --warning: #facc15;
+  --radius: 10px;
+  --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+}
