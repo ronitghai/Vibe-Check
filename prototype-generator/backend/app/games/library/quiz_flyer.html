@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Quiz Flyer</title>
+<style>
+  .wrap { text-align: center; }
+  .game-title { margin-bottom: 8px; }
+  #hint { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+  .canvas-wrap { position: relative; display: inline-block; }
+  canvas { background: var(--surface); border-radius: var(--radius); display: block; cursor: pointer; }
+  .quiz-overlay {
+    position: absolute; inset: 0; z-index: 2;
+    background: rgba(15, 23, 42, 0.92); border-radius: var(--radius);
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    padding: 20px; gap: 10px; text-align: center;
+  }
+  #quiz-question { font-size: 15px; font-weight: 600; color: var(--text); }
+  .quiz-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+  .quiz-choice {
+    padding: 10px; border-radius: var(--radius); background: var(--surface);
+    border: 2px solid transparent; cursor: pointer; font-size: 13px; color: var(--text);
+  }
+  .quiz-choice:hover:not(:disabled) { background: var(--surface-2); }
+  .quiz-choice.correct { background: var(--success-bg); border-color: var(--success); }
+  .quiz-choice.wrong { background: var(--danger-bg); border-color: var(--danger); }
+  .quiz-choice:disabled { cursor: default; }
+  #quiz-feedback { font-size: 13px; color: var(--text-muted); min-height: 18px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="game-title">Quiz Flyer</h1>
+    <div id="hint">Click or press Space to flap — answer questions along the way to keep your streak going</div>
+    <div class="canvas-wrap">
+      <canvas id="c" width="360" height="480"></canvas>
+      <div class="quiz-overlay" id="quiz-overlay">
+        <div id="quiz-question"></div>
+        <div class="quiz-choices" id="quiz-choices"></div>
+        <div id="quiz-feedback"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  var CONFIG = window.__CONFIG__ || {};
+  var difficulty = CONFIG.difficulty || "medium";
+  var checkpointEvery = CONFIG.checkpointEvery || 4;
+  var questions = (CONFIG.questions && CONFIG.questions.length) ? CONFIG.questions : [
+    { question: "2 + 2 = ?", choices: ["3", "4", "5", "6"], answerIndex: 1 }
+  ];
+
+  var settings = {
+    easy:   { gravity: 0.32, flap: -6.4, gap: 150, speed: 2.2, spawn: 105 },
+    medium: { gravity: 0.4,  flap: -7.2, gap: 130, speed: 2.8, spawn: 90 },
+    hard:   { gravity: 0.48, flap: -7.6, gap: 112, speed: 3.4, spawn: 78 }
+  }[difficulty] || { gravity: 0.4, flap: -7.2, gap: 130, speed: 2.8, spawn: 90 };
+
+  var canvas = document.getElementById("c");
+  var ctx = canvas.getContext("2d");
+  var W = canvas.width, H = canvas.height;
+  var PIPE_W = 52;
+
+  var theme = window.GameTheme || {};
+  var COLORS = {
+    accent: theme.accent || "#38bdf8",
+    success: theme.success || "#22c55e",
+    warning: theme.warning || "#facc15",
+    text: theme.text || "#e2e8f0"
+  };
+
+  var overlayEl = document.getElementById("quiz-overlay");
+  var questionEl = document.getElementById("quiz-question");
+  var choicesEl = document.getElementById("quiz-choices");
+  var feedbackEl = document.getElementById("quiz-feedback");
+
+  var bird, pipes, frame, score, best, over, started, paused;
+  var pipesSinceCheckpoint, questionIndex;
+  // Tracked separately from the arcade `score` (which also counts pipes
+  // passed) — this is the clean correct/total ratio reported to the AZ-900
+  // loop, see gameOver() below.
+  var quizCorrect, quizTotal;
+
+  function reset() {
+    bird = { x: 70, y: H / 2, vy: 0, r: 12 };
+    pipes = [];
+    frame = 0;
+    score = 0;
+    over = false;
+    started = false;
+    paused = false;
+    pipesSinceCheckpoint = 0;
+    questionIndex = 0;
+    quizCorrect = 0;
+    quizTotal = 0;
+    overlayEl.style.display = "none";
+  }
+
+  function spawnPipe() {
+    var margin = 40;
+    var top = margin + Math.random() * (H - settings.gap - margin * 2);
+    pipes.push({ x: W + PIPE_W, top: top, passed: false });
+  }
+
+  function update() {
+    if (!started || over || paused) return;
+
+    bird.vy += settings.gravity;
+    bird.y += bird.vy;
+
+    frame++;
+    if (frame % settings.spawn === 0) spawnPipe();
+
+    for (var i = pipes.length - 1; i >= 0; i--) {
+      var p = pipes[i];
+      p.x -= settings.speed;
+
+      if (!p.passed && p.x + PIPE_W < bird.x) {
+        p.passed = true;
+        score++;
+        pipesSinceCheckpoint++;
+        if (pipesSinceCheckpoint >= checkpointEvery) {
+          pipesSinceCheckpoint = 0;
+          showCheckpoint();
+        }
+      }
+      if (p.x < -PIPE_W) pipes.splice(i, 1);
+
+      var hitX = bird.x + bird.r > p.x && bird.x - bird.r < p.x + PIPE_W;
+      var hitY = bird.y - bird.r < p.top || bird.y + bird.r > p.top + settings.gap;
+      if (hitX && hitY) gameOver();
+    }
+
+    if (bird.y + bird.r > H || bird.y - bird.r < 0) gameOver();
+  }
+
+  function gameOver() {
+    over = true;
+    best = Math.max(best || 0, score);
+    // Only report if at least one checkpoint question was actually reached
+    // — dying before the first checkpoint has nothing meaningful to score.
+    if (quizTotal > 0 && window.reportGameResult) window.reportGameResult(quizCorrect, quizTotal);
+  }
+
+  function flap() {
+    if (paused) return;
+    if (over) { reset(); return; }
+    started = true;
+    bird.vy = settings.flap;
+  }
+
+  function showCheckpoint() {
+    paused = true;
+    var q = questions[questionIndex % questions.length];
+    questionEl.textContent = q.question;
+    feedbackEl.textContent = "";
+    choicesEl.innerHTML = "";
+
+    q.choices.forEach(function (choice, idx) {
+      var btn = document.createElement("button");
+      btn.className = "quiz-choice";
+      btn.textContent = choice;
+      btn.addEventListener("click", function () { answerCheckpoint(idx, q); });
+      choicesEl.appendChild(btn);
+    });
+
+    overlayEl.style.display = "flex";
+  }
+
+  function answerCheckpoint(idx, q) {
+    var buttons = choicesEl.querySelectorAll(".quiz-choice");
+    buttons.forEach(function (b) { b.disabled = true; });
+    buttons[q.answerIndex].classList.add("correct");
+
+    quizTotal++;
+    if (idx === q.answerIndex) {
+      quizCorrect++;
+      score += 5;
+      feedbackEl.textContent = "✅ Correct! +5";
+    } else {
+      buttons[idx].classList.add("wrong");
+      feedbackEl.textContent = "❌ Not quite — resuming...";
+    }
+
+    questionIndex++;
+    setTimeout(function () {
+      overlayEl.style.display = "none";
+      paused = false;
+    }, 900);
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    ctx.fillStyle = COLORS.accent;
+    ctx.globalAlpha = 0.15;
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = COLORS.success;
+    pipes.forEach(function (p) {
+      ctx.fillRect(p.x, 0, PIPE_W, p.top);
+      ctx.fillRect(p.x, p.top + settings.gap, PIPE_W, H - p.top - settings.gap);
+    });
+
+    ctx.fillStyle = COLORS.warning;
+    ctx.beginPath();
+    ctx.arc(bird.x, bird.y, bird.r, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = COLORS.text;
+    ctx.font = "bold 22px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(String(score), W / 2, 40);
+
+    if (!started) {
+      ctx.font = "14px system-ui, sans-serif";
+      ctx.fillText("Click to start", W / 2, H / 2);
+    }
+    if (over) {
+      ctx.fillStyle = "rgba(15,23,42,0.75)";
+      ctx.fillRect(0, H / 2 - 50, W, 100);
+      ctx.fillStyle = COLORS.text;
+      ctx.font = "bold 20px system-ui, sans-serif";
+      ctx.fillText("Game Over", W / 2, H / 2 - 12);
+      ctx.font = "14px system-ui, sans-serif";
+      ctx.fillText("Score " + score + "  •  Best " + best, W / 2, H / 2 + 12);
+      ctx.fillText("Click to play again", W / 2, H / 2 + 34);
+    }
+  }
+
+  function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  canvas.addEventListener("click", flap);
+  document.addEventListener("keydown", function (e) {
+    if (e.code === "Space") { e.preventDefault(); flap(); }
+  });
+
+  reset();
+  loop();
+})();
+</script>
+</body>
+</html>

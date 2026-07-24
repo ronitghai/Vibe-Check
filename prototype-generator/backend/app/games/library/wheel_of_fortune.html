@@ -109,6 +109,8 @@
     statusEl.textContent = won ? "You solved it! 🎉" : "Out of guesses!";
     restartBtn.style.display = "inline-block";
     Object.keys(keyEls).forEach(function (l) { keyEls[l].disabled = true; });
+
+    if (window.reportGameResult) window.reportGameResult(won ? 1 : 0, 1);
   }
 
   function onKeydown(e) {

@@ -23,6 +23,7 @@
 <body>
   <div class="wrap">
     <h1 class="game-title">Tic-Tac-Toe</h1>
+    <div id="fact" class="game-meta"></div>
     <div id="status" class="game-status">Your turn</div>
     <div id="board" class="board"></div>
     <button id="restart" class="btn">Restart</button>
@@ -38,6 +39,11 @@
   var boardEl = document.getElementById("board");
   var statusEl = document.getElementById("status");
   var restartBtn = document.getElementById("restart");
+  var factEl = document.getElementById("fact");
+
+  // Optional: AZ-900 practice games attach a one-line grounded fact here
+  // (there's no natural content slot in Tic-Tac-Toe itself to test).
+  if (CONFIG.factCard) factEl.textContent = "💡 " + CONFIG.factCard;
 
   var board, over, winLine;
 
@@ -145,6 +151,12 @@
     else if (result.symbol === playerSymbol) statusEl.textContent = "You win! 🎉";
     else statusEl.textContent = "AI wins!";
     render();
+
+    // No natural "correct/total" here, so a win reports as 1/1 and a draw
+    // or loss reports as 0/1 — see games/bundle.py's reportGameResult docs.
+    if (window.reportGameResult) {
+      window.reportGameResult(result.symbol === playerSymbol ? 1 : 0, 1);
+    }
   }
 
   function start() {

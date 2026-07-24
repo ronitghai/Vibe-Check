@@ -4,12 +4,37 @@
   height: 100vh;
 }
 
-.app-header {
-  padding: 12px 20px;
+/* Generic buttons, reused across AZ-900 screens (matches the .btn
+   already injected into every game bundle by backend/app/games/bundle.py,
+   so app chrome and games read as one system). */
+.btn {
+  padding: 8px 20px;
+  border-radius: var(--radius);
+  border: none;
+  background: var(--accent);
+  color: var(--bg);
   font-weight: 700;
-  font-size: 16px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn-secondary {
+  background: var(--surface-2);
+  color: var(--text);
+  margin-left: 10px;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--border);
 }
 
 .app-main {
@@ -18,30 +43,16 @@
   display: flex;
 }
 
-/* Library */
-.library {
-  flex: 1;
-  overflow-y: auto;
-  padding: 28px 32px;
-}
-
-.library-header h2 {
-  margin: 0 0 4px;
-  font-size: 22px;
-}
-
-.library-header p {
-  margin: 0 0 24px;
+/* Shared across AZ-900 screens: a muted one-line loading/status message
+   (.status-text) and the grid of game cards (.game-grid) — used by
+   Az900Diagnostic (loading), Az900GameWindow (loading), and Az900GameMenu
+   (both). */
+.status-text {
   color: var(--text-muted);
   font-size: 14px;
 }
 
-.library-status {
-  color: var(--text-muted);
-  font-size: 14px;
-}
-
-.library-grid {
+.game-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 16px;
@@ -136,6 +147,19 @@
 .play-title {
   font-weight: 600;
   font-size: 14px;
+}
+
+/* Only rendered when a real score has just been reported by the game (see
+   PlayView.tsx's message listener) — a transient confirmation, not a
+   button; pinned to the right side of the header bar. */
+.result-banner {
+  margin-left: auto;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--success-bg);
+  color: var(--success);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .play-status {
@@ -307,4 +331,353 @@
 .chat-input button:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+/* ===========================================================================
+   AZ-900 learning companion
+   ---------------------------------------------------------------------------
+   Layout structure (this is the fix for the "stray scrollbar / dead space
+   on wide screens" bug): `.az900` is a full-width, full-height flex COLUMN
+   with no max-width anywhere in it. It has exactly one scrolling region at
+   a time — either `.az900-body` (diagnostic screen) or `.az900-window`
+   (game window screen) — never both, and never a capped-width block
+   floating inside a wider row. If you're adding a new AZ-900 screen, follow
+   this same pattern: `.az900` > fixed-height bits (progress bar) + exactly
+   one `flex: 1; min-height: 0; overflow-y: auto;` region for everything
+   else.
+   ========================================================================= */
+.az900 {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Az900Gate.tsx — the landing prompt, first thing any session sees. Just a
+   centered card, no progress bar/scroll region like the other AZ-900
+   screens since there's nothing to scroll. */
+.az900-gate {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+.az900-gate-card {
+  max-width: 480px;
+  text-align: center;
+}
+
+.az900-gate-card h1 {
+  margin: 0 0 12px;
+  font-size: 26px;
+}
+
+.az900-gate-card p {
+  margin: 0 0 24px;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Shared progress bar strip (Az900ProgressBar.tsx) — used at the top of
+   both the diagnostic and the game window, stays fixed while the content
+   below it scrolls. */
+.az900-progress-wrap {
+  flex-shrink: 0;
+  padding: 14px 32px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.az900-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.az900-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.az900-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+/* Smaller variant used inside the weak-areas sidebar's per-domain rows. */
+.az900-bar-small {
+  height: 5px;
+}
+
+/* The diagnostic screen's single scroll region (header + question list +
+   submit button all live inside this, see Az900Diagnostic.tsx). */
+.az900-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px 32px;
+}
+
+.az900-header h2 {
+  margin: 0 0 4px;
+  font-size: 22px;
+}
+
+.az900-header p {
+  margin: 0 0 24px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.az900-questions {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.az900-question {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.az900-question-meta {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.az900-question-text {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.az900-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.az900-choice {
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  border: 2px solid transparent;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.az900-choice:hover {
+  border-color: var(--accent);
+}
+
+.az900-choice.selected {
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 700;
+  border-color: var(--accent);
+}
+
+/* --- Game Window screen (Az900GameWindow.tsx): sidebar + game menu ---
+   `.az900-window` is this screen's single scroll region (same role as
+   `.az900-body` on the diagnostic screen — see the big comment at the top
+   of this AZ-900 section). It's a wrapping flex row so the sidebar and menu
+   sit side-by-side on wide screens but stack on narrow ones, without a
+   separate mobile media query. */
+.az900-window {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 24px;
+  padding: 24px 32px;
+}
+
+.az900-sidebar {
+  flex: 1 1 260px;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.az900-sidebar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Az900WeakAreas' rows are display-only (plain divs, not buttons) — domain
+   selection now happens in Az900DomainPicker instead, see that component. */
+.az900-sidebar-item {
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.az900-sidebar-item-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.az900-sidebar-item-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.az900-retake-btn {
+  margin-left: 0; /* .btn-secondary defaults to margin-left:10px for inline pairing; this button stands alone */
+  width: 100%;
+}
+
+.az900-menu {
+  flex: 3 1 400px;
+  min-width: 0;
+}
+
+/* AZ-900 summary modal (reuses .drawer-backdrop for the dim overlay) */
+.az900-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 480px;
+  max-width: 92vw;
+  max-height: 85vh;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  z-index: 30;
+  overflow: hidden;
+}
+
+.az900-modal-body {
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.az900-score {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.az900-weakest {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.az900-explanations {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.az900-explanation {
+  background: var(--surface);
+  border-left: 3px solid var(--danger);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.az900-explanation-q {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.az900-explanation-detail {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.az900-explanation-text {
+  font-size: 12px;
+  color: var(--text);
+}
+
+/* Az900DomainPicker.tsx — reuses .az900-modal's positioning/backdrop, just
+   narrower (it's 3 buttons, not a results readout). */
+.az900-picker-modal {
+  width: 380px;
+}
+
+.az900-picker-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0 0 14px;
+}
+
+.az900-picker-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.az900-picker-option {
+  text-align: left;
+  background: var(--surface);
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  padding: 12px;
+  cursor: pointer;
+  color: var(--text);
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.az900-picker-option:hover {
+  border-color: var(--accent);
+}
+
+.az900-picker-option-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.az900-picker-badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 700;
 }

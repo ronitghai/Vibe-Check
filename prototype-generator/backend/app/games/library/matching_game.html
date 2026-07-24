@@ -106,6 +106,10 @@
   function finish() {
     statsEl.textContent = "All matched with " + mistakes + " mistakes! 🎉";
     restartBtn.style.display = "inline-block";
+
+    // No win/lose state (you always finish) — report pairs found vs. total
+    // attempts (pairs + mistakes), so a mistake-free run is a perfect score.
+    if (window.reportGameResult) window.reportGameResult(pairs.length, pairs.length + mistakes);
   }
 
   function start() {

@@ -1,3 +1,16 @@
+/**
+ * ChatWindow.tsx
+ * ---------------
+ * The message list + input box inside ChatDrawer. Every game this launches
+ * is AZ-900 exam-prep content (see backend/app/orchestrator.py's system
+ * prompt) — the chat itself is topic-agnostic UI, the topic constraint lives
+ * entirely on the backend, so this component doesn't need to know or
+ * enforce anything about AZ-900 beyond passing the `domain` the backend
+ * reports back up to `onGameLaunched`, which is what lets App.tsx wire real
+ * score reporting for a chat-launched game exactly like a Game Menu practice
+ * game (see PlayView.tsx's postMessage listener).
+ */
+
 import { useEffect, useRef, useState } from "react";
 import { fetchHistory, sendChatMessage } from "../api/client";
 import type { ChatMessage } from "../types";
@@ -5,12 +18,12 @@ import type { ChatMessage } from "../types";
 const WELCOME: ChatMessage = {
   role: "assistant",
   content:
-    'Hi! Ask me to launch a game — try "let\'s play tic tac toe" or "make me a space-themed trivia quiz".',
+    'Hi! Ask me for a game and I\'ll build it from real AZ-900 material — try "quiz me on Azure pricing" or "help me practice availability zones".',
 };
 
 interface Props {
   sessionId: string;
-  onGameLaunched: (gameId: string, gameType: "template" | "generated") => void;
+  onGameLaunched: (gameId: string, gameType: "template" | "generated", domain: string) => void;
 }
 
 export default function ChatWindow({ sessionId, onGameLaunched }: Props) {
@@ -45,8 +58,8 @@ export default function ChatWindow({ sessionId, onGameLaunched }: Props) {
     try {
       const res = await sendChatMessage(sessionId, text);
       setMessages((m) => [...m, { role: "assistant", content: res.reply || "…" }]);
-      if (res.game_ready && res.game_id && res.game_type) {
-        onGameLaunched(res.game_id, res.game_type);
+      if (res.game_ready && res.game_id && res.game_type && res.domain) {
+        onGameLaunched(res.game_id, res.game_type, res.domain);
       }
     } catch {
       setMessages((m) => [

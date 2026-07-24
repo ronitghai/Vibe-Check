@@ -1,9 +1,17 @@
+/**
+ * GameCard.tsx
+ * -------------
+ * One tile in the Game Menu grid (Az900GameMenu.tsx) — purely
+ * presentational, `onPlay` is whatever the caller wants clicking the whole
+ * card to do (Az900GameMenu opens its domain picker, not a direct launch).
+ */
+
 import type { LibraryItem } from "../types";
 
 const ICONS: Record<string, string> = {
   tic_tac_toe: "⭕",
   wheel_of_fortune: "🎡",
-  flappy_bird: "🐦",
+  quiz_flyer: "🐦",
   memory_match: "🧠",
   matching_game: "🔗",
   crossword: "📝",

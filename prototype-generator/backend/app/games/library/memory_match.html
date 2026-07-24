@@ -91,6 +91,12 @@
   function finish() {
     statsEl.textContent = "Solved in " + moves + " moves! 🎉";
     restartBtn.style.display = "inline-block";
+
+    // No win/lose state here (you always finish eventually) — "doing well"
+    // means efficiency, so report pairs found vs. total attempts. A
+    // mistake-free run is matchedCount === moves (100%); every wrong guess
+    // lowers the ratio.
+    if (window.reportGameResult) window.reportGameResult(matchedCount, moves);
   }
 
   function start() {

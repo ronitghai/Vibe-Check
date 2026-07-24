@@ -80,15 +80,21 @@
 
   function check() {
     var allCorrect = true;
+    var wordsCorrect = 0;
     inputs.forEach(function (entry) {
+      var entryCorrect = true;
       entry.boxes.forEach(function (box, i) {
         var ok = box.value === entry.word[i];
         box.classList.toggle("correct", ok);
         box.classList.toggle("wrong", !ok && box.value !== "");
-        if (!ok) allCorrect = false;
+        if (!ok) { allCorrect = false; entryCorrect = false; }
       });
+      if (entryCorrect) wordsCorrect++;
     });
     statusEl.textContent = allCorrect ? "All correct! 🎉" : "Some letters aren't right yet — keep trying.";
+
+    // Report per-word accuracy each time the learner checks their answers.
+    if (window.reportGameResult) window.reportGameResult(wordsCorrect, inputs.length);
   }
 
   checkBtn.addEventListener("click", check);

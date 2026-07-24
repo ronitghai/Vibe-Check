@@ -2,9 +2,11 @@
 generator.py
 ------------
 Free-form path: ask the LLM for a single self-contained HTML game bundle,
-then run it through validator.validate(). One retry with the failure reason
-fed back to the model; if that also fails, give up and let the caller fall
-back to suggesting a template game.
+then run it through validator.validate(). Up to two retries with the failure
+reason fed back to the model; if all attempts fail, give up and let the
+caller fall back to suggesting a template game. Temperature is kept low —
+correctness matters more than creative variety here, since the validator
+(and the player) has no tolerance for broken output.
 """
 
 import re
@@ -16,8 +18,11 @@ from . import validator
 
 client = OpenAI(api_key=config.GROQ_API_KEY, base_url=config.GROQ_BASE_URL)
 
-SYSTEM_PROMPT = """You write tiny, self-contained single-player browser games that fit into an \
-existing game library, so they must look like they belong there — not like a random page.
+SYSTEM_PROMPT = """You write tiny, self-contained single-player browser games for an EDUCATIONAL \
+game library, so they must look like they belong there (not like a random page) and, where the \
+requested topic allows it, leave the player having practiced or recalled something real — a \
+fact, a vocabulary word, a formula. Never force a quiz onto a request that's clearly meant to be \
+pure arcade fun; a light, natural learning hook beats a bolted-on one.
 
 Rules — follow ALL of them exactly:
 1. Output ONE complete HTML document: <!DOCTYPE html><html>...<head>...</head><body>...</body></html>. Nothing before or after it, no markdown code fences.
@@ -25,14 +30,13 @@ Rules — follow ALL of them exactly:
 3. NEVER reference anything external: no external <script src>, <link>, images, fonts, or network calls of any kind (no fetch, XMLHttpRequest, WebSocket). No document.cookie, localStorage, indexedDB, or references to `top`/`parent`. The page must work completely offline and stay inside its own iframe.
 4. Use only inline SVG, CSS shapes/gradients, canvas drawing, emoji, and text for visuals — no external images.
 5. Keep it to ONE simple core mechanic (click/tap/keyboard), a visible score or win/lose state, and a "Play again" / restart control. Target under 200 lines of code total.
-6. Make it genuinely playable: bind real event listeners, update real game state, and render feedback (no dead buttons).
-7. DESIGN SYSTEM — a shared dark theme is already injected into <head> before your <style> tag, as CSS custom properties and utility classes. Use them for everything instead of inventing your own palette or hex colors:
-   - Colors: var(--bg), var(--surface), var(--surface-2), var(--border), var(--text), var(--text-muted), var(--accent), var(--accent-strong), var(--success), var(--success-bg), var(--danger), var(--danger-bg), var(--warning)
-   - Sizing: var(--radius) for corner radius, var(--font) for font-family
-   - Utility classes already defined — reuse them, don't redefine: .btn (primary action button), .game-title (h1-style heading), .game-meta (small muted subtitle line), .game-status (status/score line)
+6. Make it genuinely playable: bind real event listeners, update real game state, and render feedback (no dead buttons). Every id you reference with getElementById/querySelector in your script MUST exist in your HTML — double check spelling before finishing.
+7. DESIGN SYSTEM — a shared dark theme is already injected into <head>, before your <style> tag, as CSS custom properties, utility classes, AND a ready-to-use JS object. Use it for everything instead of inventing your own palette or hex colors:
+   - CSS: var(--bg), var(--surface), var(--surface-2), var(--border), var(--text), var(--text-muted), var(--accent), var(--accent-strong), var(--success), var(--success-bg), var(--danger), var(--danger-bg), var(--warning), var(--radius), var(--font) — use these inside your <style> block and in style="..." attributes.
+   - JavaScript: `window.GameTheme` is already defined with the SAME colors as plain strings — GameTheme.bg, .surface, .surface2, .border, .text, .textMuted, .accent, .accentStrong, .success, .successBg, .danger, .dangerBg, .warning. This is the ONLY way to get a color in JavaScript (canvas fillStyle, el.style.background = GameTheme.accent, etc.) — never call getComputedStyle yourself, and never write `var(--x)` inside your <script> tag. `var(--x)` is CSS-only syntax; used as a bare JS expression it is a syntax error that crashes the entire game.
+   - Utility classes already defined — reuse them, don't redefine: .btn (primary action button), .game-title (h1-style heading), .game-meta (small muted subtitle line), .game-status (status/score line).
    - `body` is already styled (dark background, centered flex layout, padding) — your own <style> only needs to add layout specific to your game (grid sizes, canvas dimensions, card layout), not re-declare background/color/font-family.
-   - If you draw on a <canvas>, read the actual colors at runtime with getComputedStyle(document.documentElement).getPropertyValue('--accent') etc. instead of hardcoding hex in fillStyle, so canvas art matches the theme too.
-   - IMPORTANT: `var(--x)` is CSS-only syntax. It is valid inside a <style> block or an inline style="..." string, but it is NOT a JavaScript expression — writing `var(--accent)` directly in your <script> tag is a syntax error and will crash the entire game. In JavaScript, either set styles as strings (e.g. el.style.background = "var(--accent)") or read the resolved value via getComputedStyle as described above."""
+8. If your game combines a live loop (canvas animation, a timer) with a pause-for-a-question or pause-for-a-dialog moment, the safe pattern is: keep a single boolean flag (e.g. `paused`) that your loop's update step checks and returns early on; show the question/dialog as a normal DOM element positioned `absolute` over the canvas (parent needs `position: relative`) so it visually blocks input naturally; when the DOM dialog is answered/closed, set the flag back to false. Don't try to pause `requestAnimationFrame` itself — just gate the state-changing logic inside it."""
 
 
 def generate_game(title: str, spec: str) -> tuple[str | None, str | None]:
@@ -43,11 +47,11 @@ def generate_game(title: str, spec: str) -> tuple[str | None, str | None]:
         {"role": "user", "content": user_prompt},
     ]
 
-    for attempt in range(2):
+    for attempt in range(3):
         response = client.chat.completions.create(
             model=config.CODEGEN_MODEL,
             messages=messages,
-            temperature=0.7,
+            temperature=0.4,
         )
         raw = response.choices[0].message.content or ""
         html = _extract_html(raw)

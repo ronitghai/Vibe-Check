@@ -51,6 +51,9 @@
   var restartBtn = document.getElementById("restart");
 
   var qIndex, score, streak, locked, timeLeft, timerHandle;
+  // Separate from `score` (which includes speed bonuses) — the clean
+  // correct/total ratio reported to the AZ-900 loop, see finish() below.
+  var correctCount;
 
   function renderQuestion() {
     var q = questions[qIndex];
@@ -95,6 +98,7 @@
 
     if (idx === q.answerIndex) {
       streak++;
+      correctCount++;
       var speedBonus = Math.max(0, Math.round((timeLeft / timePerQuestion) * 50));
       score += 50 + speedBonus;
     } else {
@@ -117,12 +121,15 @@
     finalEl.textContent = "Final score: " + score + " 🎉";
     scoreEl.textContent = "";
     restartBtn.style.display = "inline-block";
+
+    if (window.reportGameResult) window.reportGameResult(correctCount, questions.length);
   }
 
   function start() {
     qIndex = 0;
     score = 0;
     streak = 0;
+    correctCount = 0;
     finalEl.style.display = "none";
     restartBtn.style.display = "none";
     renderQuestion();

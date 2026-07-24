@@ -1,3 +1,14 @@
+"""
+routers/games.py
+------------------
+Generic game-serving endpoints shared by every launch path in the app (chat
+generator, Game Menu practice content, instant-launch) — nothing here is
+AZ-900-specific. A "library" in the endpoint names below just means "every
+game this session has launched, plus the 7 always-available templates"; the
+frontend's Az900GameMenu.tsx is the only place that still lists them
+(there's no standalone browsing screen anymore, see App.tsx's docblock).
+"""
+
 from fastapi import APIRouter, HTTPException
 
 from .. import session_store
