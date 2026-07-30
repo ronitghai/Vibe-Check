@@ -82,19 +82,30 @@ class AssessmentScore(BaseModel):
     total: int
 
 
+class RecommendedActivity(BaseModel):
+    gameId: str
+    gameLabel: str
+    domain: str
+    difficulty: str
+    masteryPct: int
+    practiceCount: int
+    reason: str
+
+
 class AssessmentSubmitResponse(BaseModel):
     results: List[AssessmentResult]
     explanations: List[MissedExplanation]
     score: AssessmentScore
     mastery: List[DomainMastery]
     weakestDomain: str
+    recommendedActivity: Optional[RecommendedActivity] = None
 
 
 # --- POST /api/az900/game/generate ---
 
 class GeneratePracticeGameRequest(BaseModel):
     session_id: str
-    game_id: str  # which of the 7 template games to generate content for — required
+    game_id: str  # curated learning activity id
     domain: Optional[str] = None  # omit to target the current weakest domain
 
 
@@ -113,6 +124,7 @@ class DashboardResponse(BaseModel):
     domains: List[DomainMastery]
     weakestDomain: str
     overallProgress: int  # 0-100, see service.get_progress_summary for the formula
+    recommendedActivity: Optional[RecommendedActivity] = None
 
 
 class PracticeResultRequest(BaseModel):

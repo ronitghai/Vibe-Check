@@ -17,6 +17,7 @@
   .choice:hover { background: var(--surface-2); }
   .choice.correct { background: var(--success-bg); border-color: var(--success); }
   .choice.wrong { background: var(--danger-bg); border-color: var(--danger); }
+  #feedback { display:none; margin-top:12px; padding:12px; text-align:left; background:var(--surface); border-left:4px solid var(--accent); }
   #score { margin-top: 16px; font-size: 14px; color: var(--text-muted); }
   #final { display: none; font-size: 18px; margin-top: 10px; }
   #restart { margin-top: 14px; display: none; }
@@ -29,7 +30,7 @@
     <div class="timerbar"><div class="timerfill" id="timerfill"></div></div>
     <div id="question"></div>
     <div class="choices" id="choices"></div>
-    <div id="score"></div>
+    <div id="feedback"></div><div id="score"></div>
     <div id="final"></div>
     <button id="restart" class="btn">Play again</button>
   </div>
@@ -46,6 +47,7 @@
   var timerfillEl = document.getElementById("timerfill");
   var questionEl = document.getElementById("question");
   var choicesEl = document.getElementById("choices");
+  var feedbackEl = document.getElementById("feedback");
   var scoreEl = document.getElementById("score");
   var finalEl = document.getElementById("final");
   var restartBtn = document.getElementById("restart");
@@ -61,6 +63,7 @@
     questionEl.textContent = q.question;
     scoreEl.textContent = "Score: " + score + (streak > 1 ? "  •  Streak x" + streak : "");
     choicesEl.innerHTML = "";
+    feedbackEl.style.display = "none";
     locked = false;
 
     q.choices.forEach(function (choice, idx) {
@@ -105,11 +108,13 @@
       streak = 0;
     }
 
+    feedbackEl.innerHTML = "<strong>" + (idx === q.answerIndex ? "Correct" : "Review") + "</strong><br>" + (q.explanation || "Review this concept before continuing.");
+    feedbackEl.style.display = "block";
     setTimeout(function () {
       qIndex++;
       if (qIndex < questions.length) renderQuestion();
       else finish();
-    }, 900);
+    }, 2200);
   }
 
   function finish() {

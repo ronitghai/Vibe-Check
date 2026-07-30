@@ -1,42 +1,56 @@
 """
 orchestrator.py
-----------------
-Groq tool-calling chat loop, one turn at a time, session-scoped. This is the
-"✨ Generate a game" chat entry point in the AZ-900 Game Menu — everything it
-produces must be genuine AZ-900 (Microsoft Azure Fundamentals) exam-prep
-content tied to one of the 3 domains in learning/knowledge_base.py's DOMAINS,
-not a general-purpose "make me any game" tool. Mirrors chatbot.py's chat()
-loop but stores history as plain dicts in session_store instead of an
-in-memory list, and reports back whether a game got launched — including
-which AZ-900 domain it targets — so the API layer can tell the frontend to
-fetch the bundle and wire up real score reporting the same way a Game Menu
-practice game does (see PlayView.tsx's postMessage listener and
-learning/service.py's record_practice_result).
+---------------
+Groq tool-calling chat loop for the AZ-900 Study Companion.
+
+The orchestrator can:
+
+1. Launch curated AZ-900 learning activities.
+2. Generate completely new educational games.
+3. Recover from Groq tool_use_failed errors where a valid function call is
+   returned as malformed text instead of a structured tool call.
+4. Preserve session-scoped chat history.
+5. Report launched games back to the frontend.
 """
 
-import json
+from __future__ import annotations
 
-from openai import OpenAI
+import json
+import re
+from typing import Any
+
+from openai import BadRequestError, OpenAI
 
 from . import config, session_store, tools
 from .learning import store as learning_store
 from .learning.knowledge_base import DOMAINS, SNIPPETS
 
-client = OpenAI(api_key=config.GROQ_API_KEY, base_url=config.GROQ_BASE_URL)
+
+client = OpenAI(
+    api_key=config.GROQ_API_KEY,
+    base_url=config.GROQ_BASE_URL,
+)
+
+
+MAX_TOOL_ROUNDS = 4
+MAX_TOOL_RETRIES = 1
 
 
 def _facts_block() -> str:
-    """One bullet list of every hand-authored SNIPPETS fact, grouped by
-    domain — handed to the model as reference material for the WHOLE
-    conversation (not just one domain) since a chat conversation can freely
-    move between game types and topics, unlike the Game Menu's per-request
-    generators in learning/service.py, which already know the domain before
-    they ever call the LLM."""
-    lines = []
+    """
+    Build a reference block containing the hand-authored AZ-900 facts from
+    learning/knowledge_base.py.
+    """
+    lines: list[str] = []
+
     for domain in DOMAINS:
         lines.append(f"{domain}:")
+
         for entry in SNIPPETS[domain]:
-            lines.append(f"  - {entry['snippet']}")
+            snippet = entry.get("snippet", "")
+            if snippet:
+                lines.append(f"  - {snippet}")
+
     return "\n".join(lines)
 
 
@@ -44,127 +58,676 @@ FACTS_BLOCK = _facts_block()
 
 
 def _build_system_prompt(weakest_domain: str) -> str:
-    """Built fresh per new conversation (not a module-level constant) so it
-    can bake in this session's current weakest domain as the default focus —
-    see run_turn, which only calls this once, when history is empty."""
-    return f"""You are the AZ-900 Study Companion's game generator, embedded in an app whose \
-whole purpose is helping someone pass the Microsoft AZ-900 (Azure Fundamentals) certification \
-exam by turning study into short, playable games. EVERY game you launch must be genuine AZ-900 \
-exam-prep content from one of these 3 domains, no exceptions: {", ".join(DOMAINS)}.
+    """
+    Build the system prompt for a new conversation.
 
-Real facts to ground content in — use these, don't invent Azure details that aren't here or in \
-well-established AZ-900 material:
+    The learner's current weakest domain is included so the model can use it
+    whenever the learner does not select a particular AZ-900 domain.
+    """
+    domains_text = ", ".join(DOMAINS)
+
+    return f"""
+You are the game-generation assistant inside the AZ-900 Study Companion.
+
+Your purpose is to help learners prepare for the Microsoft Azure Fundamentals
+AZ-900 certification through short, educational, playable activities.
+
+Every learning activity must use genuine AZ-900 content from one of these
+domains:
+
+{domains_text}
+
+REFERENCE MATERIAL
+
+Use the following facts as grounding material:
+
 {FACTS_BLOCK}
 
-This learner's current weakest domain is "{weakest_domain}" — default to it whenever they don't \
-name a specific domain or topic themselves. If someone asks for something that has nothing to do \
-with Azure (e.g. "make me a game about dinosaurs"), don't refuse and don't just ignore the \
-request either — keep the spirit of what they asked for (the game type, the playful tone) but \
-swap the actual content for real AZ-900 material, and say so briefly in your reply.
+LEARNER PERSONALIZATION
 
-You have a library of 7 pre-built games you can launch INSTANTLY via launch_template_game. Every \
-call to launch_template_game or generate_custom_game MUST include a "domain" argument (one of \
-the 3 domains above) — the app uses it to credit the learner's progress for that domain once \
-they finish playing, so pick whichever domain the content actually tests, not just a guess.
+The learner's current weakest domain is:
 
-For each template game, write real, finished content for "config" — never leave placeholders:
+"{weakest_domain}"
 
-- tic_tac_toe: classic 3x3 grid vs a simple AI. config: {{"difficulty": "easy"|"medium"|"hard", \
-"playerSymbol": "X"|"O"}}. Optionally add "factCard": one true AZ-900 sentence from the chosen \
-domain, shown to the learner before the match.
-- wheel_of_fortune: guess-the-phrase letter game. config: {{"phrase": "UPPERCASE WORDS, letters \
-and spaces only, 2-4 words", "category": string, "maxGuesses": int}} — phrase must be a real \
-AZ-900 term or short concept name.
-- quiz_flyer: tap/space-to-flap side-scroller that pauses every few pipes for a quick multiple \
-choice question, then resumes. config: {{"difficulty": "easy"|"medium"|"hard", "checkpointEvery": \
-int (3-5), "questions": [{{"question": string, "choices": [4 strings], "answerIndex": 0-3}}, \
-...] (5 to 10 questions)}}.
-- memory_match: flip-card pairs memory game. config: {{"theme": string naming the AZ-900 \
-domain/topic, "icons": [6 to 10 single emoji strings]}} — icons can be generic/fun, the theme \
-name is what ties it to the domain.
-- matching_game: click to pair items from two columns. config: {{"title": string, "pairs": \
-[{{"left": string, "right": string}}, ...] (4 to 8 pairs)}} — real AZ-900 term↔definition pairs.
-- crossword: word-and-clue fill-in grid. config: {{"words": [{{"word": "UPPERCASE, no spaces", \
-"clue": string}}, ...] (3 to 6 words)}} — real AZ-900 vocabulary (service names, acronyms).
-- rapid_quiz: Kahoot-style timed multiple choice quiz. config: {{"questions": [{{"question": \
-string, "choices": [4 strings], "answerIndex": 0-3}}, ...] (5 to 10 questions), \
-"timePerQuestion": seconds}}.
+Use this as the default domain when the learner does not name a domain or topic.
 
-When the user's request clearly matches one of these, call launch_template_game with a \
-fully-formed config tailored to what they asked for, grounded in the facts above.
+If the learner requests a non-Azure theme or mechanic, preserve the requested
+style or game mechanic, but replace the educational content with genuine
+AZ-900 material.
 
-If the user asks for something that doesn't fit any of the 7 templates, call generate_custom_game \
-with a clear, simple spec (one core mechanic, clear controls, clear win/lose condition) that \
-still tests real AZ-900 knowledge from the chosen domain.
+For example:
 
-Otherwise, just chat normally — you don't have to launch a game every turn, and you can answer \
-AZ-900 study questions directly in text too. After launching something, confirm it in one short, \
-enthusiastic sentence."""
+- A dinosaur trivia request can become an Azure trivia game with a dinosaur
+  visual theme.
+- A Jeopardy request can become an AZ-900 Jeopardy-style challenge.
+- A racing game can test Azure concepts at checkpoints.
+
+CURATED LEARNING ACTIVITIES
+
+You may launch the following existing activities through
+launch_template_game:
+
+1. rapid_quiz
+   A multiple-choice knowledge check with immediate feedback.
+
+2. scenario_challenge
+   A scenario-based activity where the learner applies Azure concepts to
+   realistic business or technical situations.
+
+3. matching_game
+   A concept-connection activity where Azure terms are matched with their
+   definitions, purposes, or examples.
+
+4. crossword
+   A vocabulary-review activity using AZ-900 terms and clues.
+
+5. jeopardy
+   A complete category board containing four categories and four questions
+   per category.
+
+JEOPARDY ROUTING RULE
+
+If the learner asks for:
+
+- Jeopardy
+- a category board
+- a point-value board
+- trivia with categories and dollar values
+- questions worth 100, 200, 300, and 400
+
+you MUST call launch_template_game with:
+
+game_id = "jeopardy"
+
+Do not call generate_custom_game for a Jeopardy request.
+
+The jeopardy config must have this exact structure:
+
+{
+  "title": string,
+  "categories": [
+    {
+      "name": string,
+      "questions": [
+        {
+          "value": 100,
+          "question": string,
+          "choices": [4 strings],
+          "answerIndex": 0-3,
+          "explanation": string
+        },
+        {
+          "value": 200,
+          "question": string,
+          "choices": [4 strings],
+          "answerIndex": 0-3,
+          "explanation": string
+        },
+        {
+          "value": 300,
+          "question": string,
+          "choices": [4 strings],
+          "answerIndex": 0-3,
+          "explanation": string
+        },
+        {
+          "value": 400,
+          "question": string,
+          "choices": [4 strings],
+          "answerIndex": 0-3,
+          "explanation": string
+        }
+      ]
+    }
+  ]
+}
+
+Jeopardy requirements:
+
+- exactly 4 categories
+- exactly 4 questions per category
+- exactly 16 questions
+- values 100, 200, 300, and 400
+- multiple-choice answers
+- accurate AZ-900 content
+- explanations after every answer
+- no duplicate questions
+- no placeholders
+
+When calling launch_template_game:
+
+- Include a valid domain.
+- Include completed educational content in config.
+- Never leave placeholder questions, clues, scenarios, or answers.
+- Ensure all questions and answers are accurate.
+- Include explanations whenever the selected template supports them.
+
+CUSTOM GAME GENERATION
+
+The learner may also request a completely new game mechanic.
+
+When the request does not fit one of the curated activities, call
+generate_custom_game.
+
+The custom game must:
+
+- Test or reinforce genuine AZ-900 knowledge.
+- Use one clear core mechanic.
+- Have understandable controls.
+- Include a clear objective.
+- Include scoring or measurable progress.
+- Provide educational feedback.
+- Be feasible as a self-contained HTML, CSS, and JavaScript experience.
+- Report a correct and total score when the activity is complete.
+- Include one valid AZ-900 domain.
+
+Good custom-game examples include:
+
+- Jeopardy-style category board
+- Azure service sorting challenge
+- Architecture decision simulator
+- Cloud resource escape room
+- Azure terminology platformer
+- Service-model drag-and-drop challenge
+- Timed infrastructure puzzle
+- Cloud-cost decision game
+
+TOOL-CALLING REQUIREMENTS
+
+When launching or generating a game:
+
+- Use a structured function call.
+- Never write function calls as XML.
+- Never output text such as <function=...>.
+- Never place function-call JSON directly in the assistant message.
+- Always supply every required tool argument.
+- Always use one of the valid AZ-900 domains.
+
+GENERAL CHAT
+
+You do not have to launch a game every turn.
+
+You may also:
+
+- Explain AZ-900 concepts.
+- Answer study questions.
+- Recommend an activity.
+- Clarify a learner's game request.
+
+After a game launches successfully, respond with one short and enthusiastic
+sentence confirming what was created.
+""".strip()
 
 
-MAX_TOOL_ROUNDS = 4
+def _normalise_tool_arguments(raw_arguments: str | None) -> dict[str, Any]:
+    """
+    Parse tool-call arguments safely.
+
+    Tool arguments should normally contain valid JSON. This function prevents
+    malformed JSON from crashing the entire chat request.
+    """
+    if not raw_arguments:
+        return {}
+
+    try:
+        parsed = json.loads(raw_arguments)
+    except (json.JSONDecodeError, TypeError):
+        return {}
+
+    if not isinstance(parsed, dict):
+        return {}
+
+    return parsed
 
 
-def run_turn(session_id: str, user_message: str):
+def _error_body(exc: BadRequestError) -> dict[str, Any]:
+    """
+    Return the API error body when the SDK exposes it as a dictionary.
+    """
+    body = getattr(exc, "body", None)
+
+    if isinstance(body, dict):
+        return body
+
+    return {}
+
+
+def _is_tool_use_failure(exc: BadRequestError) -> bool:
+    """
+    Determine whether Groq rejected a malformed generated tool call.
+    """
+    body = _error_body(exc)
+    error = body.get("error", {})
+
+    if isinstance(error, dict):
+        code = error.get("code")
+        if code == "tool_use_failed":
+            return True
+
+    return "tool_use_failed" in str(exc)
+
+
+def _extract_failed_generation(exc: BadRequestError) -> str | None:
+    """
+    Extract Groq's failed_generation value from a tool_use_failed response.
+    """
+    body = _error_body(exc)
+    error = body.get("error", {})
+
+    if isinstance(error, dict):
+        failed_generation = error.get("failed_generation")
+
+        if isinstance(failed_generation, str):
+            return failed_generation
+
+    # Fallback for SDK versions that only expose the error through str(exc).
+    text = str(exc)
+
+    match = re.search(
+        r"""['"]failed_generation['"]\s*:\s*['"](.+?)['"]\s*}""",
+        text,
+        flags=re.DOTALL,
+    )
+
+    if match:
+        return match.group(1)
+
+    return None
+
+
+def _extract_malformed_tool_call(
+    failed_generation: str | None,
+) -> tuple[str, dict[str, Any]] | None:
+    """
+    Recover a malformed function call such as:
+
+    <function=generate_custom_game({"domain": "...", ...})</function>
+
+    Groq occasionally returns this representation instead of a structured
+    tool_calls object. If the function name and JSON arguments are valid, the
+    backend can safely recover the request.
+    """
+    if not failed_generation:
+        return None
+
+    cleaned = (
+        failed_generation
+        .replace('\\"', '"')
+        .replace("\\'", "'")
+        .strip()
+    )
+
+    match = re.search(
+        r"<function=([A-Za-z_][A-Za-z0-9_]*)\((\{.*\})\)</function>",
+        cleaned,
+        flags=re.DOTALL,
+    )
+
+    if not match:
+        return None
+
+    function_name = match.group(1)
+    arguments_text = match.group(2)
+
+    try:
+        arguments = json.loads(arguments_text)
+    except json.JSONDecodeError:
+        return None
+
+    if not isinstance(arguments, dict):
+        return None
+
+    return function_name, arguments
+
+
+def _tool_exists(function_name: str) -> bool:
+    """
+    Confirm that a recovered function name is one of the functions actually
+    exposed through tools.TOOLS.
+    """
+    for tool_definition in tools.TOOLS:
+        if not isinstance(tool_definition, dict):
+            continue
+
+        function_definition = tool_definition.get("function", {})
+
+        if (
+            isinstance(function_definition, dict)
+            and function_definition.get("name") == function_name
+        ):
+            return True
+
+    return False
+
+
+def _forced_tool_choice(function_name: str) -> dict[str, Any]:
+    """
+    Build a Chat Completions tool_choice value that forces one function.
+    """
+    return {
+        "type": "function",
+        "function": {
+            "name": function_name,
+        },
+    }
+
+
+def _create_completion(
+    history: list[dict[str, Any]],
+    *,
+    tool_choice: str | dict[str, Any] = "auto",
+):
+    """
+    Send one completion request to the configured Groq model.
+    """
+    return client.chat.completions.create(
+        model=config.ORCHESTRATOR_MODEL,
+        messages=history,
+        tools=tools.TOOLS,
+        tool_choice=tool_choice,
+    )
+
+
+def _retry_malformed_tool_call(
+    history: list[dict[str, Any]],
+    function_name: str | None,
+):
+    """
+    Retry a malformed tool call once.
+
+    If the failed function name was recovered and is a registered tool, force
+    that exact function during the retry. Otherwise, allow the model to select
+    a tool automatically.
+    """
+    retry_history = [
+        *history,
+        {
+            "role": "system",
+            "content": (
+                "Your previous tool call was malformed. Retry the request using "
+                "the API's structured tool-calling mechanism. Do not output XML "
+                "function tags, function-call text, or raw function JSON in the "
+                "assistant message. Supply valid JSON arguments matching the "
+                "selected function schema."
+            ),
+        },
+    ]
+
+    tool_choice: str | dict[str, Any] = "auto"
+
+    if function_name and _tool_exists(function_name):
+        tool_choice = _forced_tool_choice(function_name)
+
+    return _create_completion(
+        retry_history,
+        tool_choice=tool_choice,
+    )
+
+
+def _confirmation_for_game(
+    function_name: str,
+    arguments: dict[str, Any],
+) -> str:
+    """
+    Create a short response when a malformed tool call was recovered and
+    executed directly.
+    """
+    title = arguments.get("title")
+
+    if isinstance(title, str) and title.strip():
+        return f'Your "{title.strip()}" AZ-900 game is ready!'
+
+    if function_name == "generate_custom_game":
+        return "Your custom AZ-900 game is ready!"
+
+    return "Your AZ-900 learning activity is ready!"
+
+
+def _execute_tool_call(
+    session_id: str,
+    function_name: str,
+    arguments: dict[str, Any],
+) -> tuple[str, dict[str, Any] | None]:
+    """
+    Validate the function name and dispatch it through the existing tool layer.
+    """
+    if not _tool_exists(function_name):
+        return (
+            json.dumps(
+                {
+                    "ok": False,
+                    "error": f"Unknown tool: {function_name}",
+                }
+            ),
+            None,
+        )
+
+    return tools.dispatch(
+        session_id,
+        function_name,
+        arguments,
+    )
+
+
+def run_turn(
+    session_id: str,
+    user_message: str,
+) -> tuple[str, bool, str | None, str | None, str | None]:
+    """
+    Process one learner chat turn.
+
+    Returns:
+
+        reply
+        game_ready
+        game_id
+        game_type
+        game_domain
+    """
     history = session_store.get_history(session_id)
+
     if not history:
         weakest_domain = learning_store.get_weakest_domain(session_id)
-        history = [{"role": "system", "content": _build_system_prompt(weakest_domain)}]
-    history.append({"role": "user", "content": user_message})
+
+        history = [
+            {
+                "role": "system",
+                "content": _build_system_prompt(weakest_domain),
+            }
+        ]
+
+    history.append(
+        {
+            "role": "user",
+            "content": user_message,
+        }
+    )
 
     game_ready = False
-    game_id = None
-    game_type = None
-    game_domain = None
+    game_id: str | None = None
+    game_type: str | None = None
+    game_domain: str | None = None
 
     for _ in range(MAX_TOOL_ROUNDS):
-        response = client.chat.completions.create(
-            model=config.ORCHESTRATOR_MODEL,
-            messages=history,
-            tools=tools.TOOLS,
-            tool_choice="auto",
-        )
-        msg = response.choices[0].message
+        try:
+            response = _create_completion(history)
 
-        if not msg.tool_calls:
-            reply = msg.content or ""
-            history.append({"role": "assistant", "content": reply})
+        except BadRequestError as exc:
+            if not _is_tool_use_failure(exc):
+                raise
+
+            failed_generation = _extract_failed_generation(exc)
+            recovered_call = _extract_malformed_tool_call(failed_generation)
+
+            recovered_function_name: str | None = None
+            recovered_arguments: dict[str, Any] = {}
+
+            if recovered_call:
+                recovered_function_name, recovered_arguments = recovered_call
+
+            # First recovery strategy:
+            # Execute the malformed call directly when it contains valid JSON
+            # and references a registered backend tool.
+            if (
+                recovered_function_name
+                and recovered_arguments
+                and _tool_exists(recovered_function_name)
+            ):
+                result_str, launched = _execute_tool_call(
+                    session_id,
+                    recovered_function_name,
+                    recovered_arguments,
+                )
+
+                if launched:
+                    game_ready = True
+                    game_id = launched["game_id"]
+                    game_type = launched["game_type"]
+                    game_domain = launched.get("domain")
+
+                    reply = _confirmation_for_game(
+                        recovered_function_name,
+                        recovered_arguments,
+                    )
+
+                    history.append(
+                        {
+                            "role": "assistant",
+                            "content": reply,
+                        }
+                    )
+
+                    session_store.save_history(session_id, history)
+
+                    return (
+                        reply,
+                        game_ready,
+                        game_id,
+                        game_type,
+                        game_domain,
+                    )
+
+                # The tool was recovered but failed during backend execution.
+                history.append(
+                    {
+                        "role": "system",
+                        "content": (
+                            "The recovered tool request could not be completed. "
+                            f"Tool result: {result_str}"
+                        ),
+                    }
+                )
+
+            # Second recovery strategy:
+            # Ask the model to retry once using proper structured tool calling.
+            retry_succeeded = False
+
+            for _retry in range(MAX_TOOL_RETRIES):
+                try:
+                    response = _retry_malformed_tool_call(
+                        history,
+                        recovered_function_name,
+                    )
+                    retry_succeeded = True
+                    break
+
+                except BadRequestError as retry_exc:
+                    if not _is_tool_use_failure(retry_exc):
+                        raise
+
+            if not retry_succeeded:
+                reply = (
+                    "I understood the game request, but the game-generation "
+                    "tool returned an invalid call. Please try the request again."
+                )
+
+                history.append(
+                    {
+                        "role": "assistant",
+                        "content": reply,
+                    }
+                )
+
+                session_store.save_history(session_id, history)
+
+                return (
+                    reply,
+                    False,
+                    None,
+                    None,
+                    None,
+                )
+
+        message = response.choices[0].message
+
+        if not message.tool_calls:
+            reply = message.content or ""
+
+            history.append(
+                {
+                    "role": "assistant",
+                    "content": reply,
+                }
+            )
+
             session_store.save_history(session_id, history)
-            return reply, game_ready, game_id, game_type, game_domain
+
+            return (
+                reply,
+                game_ready,
+                game_id,
+                game_type,
+                game_domain,
+            )
 
         history.append(
             {
                 "role": "assistant",
-                "content": msg.content,
+                "content": message.content,
                 "tool_calls": [
                     {
-                        "id": tc.id,
+                        "id": tool_call.id,
                         "type": "function",
-                        "function": {"name": tc.function.name, "arguments": tc.function.arguments},
+                        "function": {
+                            "name": tool_call.function.name,
+                            "arguments": tool_call.function.arguments,
+                        },
                     }
-                    for tc in msg.tool_calls
+                    for tool_call in message.tool_calls
                 ],
             }
         )
 
-        for tc in msg.tool_calls:
-            try:
-                args = json.loads(tc.function.arguments)
-            except json.JSONDecodeError:
-                args = {}
+        for tool_call in message.tool_calls:
+            function_name = tool_call.function.name
+            arguments = _normalise_tool_arguments(
+                tool_call.function.arguments
+            )
 
-            result_str, launched = tools.dispatch(session_id, tc.function.name, args)
+            result_str, launched = _execute_tool_call(
+                session_id,
+                function_name,
+                arguments,
+            )
+
             if launched:
                 game_ready = True
                 game_id = launched["game_id"]
                 game_type = launched["game_type"]
                 game_domain = launched.get("domain")
 
-            history.append({"role": "tool", "tool_call_id": tc.id, "content": result_str})
+            history.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": result_str,
+                }
+            )
 
     session_store.save_history(session_id, history)
+
     return (
-        "That took a few too many steps — could you try rephrasing?",
+        "That took a few too many steps. Try describing the game in a simpler way.",
         game_ready,
         game_id,
         game_type,

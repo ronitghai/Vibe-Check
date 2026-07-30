@@ -1,0 +1,24 @@
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Python environments
+venv/
+.venv/
+
+# Environment secrets
+.env
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+
+# Node
+node_modules/
+dist/
+
+# Temporary files
+import-times.txt

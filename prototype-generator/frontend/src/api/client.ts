@@ -148,10 +148,21 @@ export interface AssessmentSubmitResponse {
  * plain average of real accuracy (masteryPct) across the 3 domains, where
  * "real accuracy" blends diagnostic answers AND actual practice-game
  * results (both flow into the same domain_mastery accumulator). */
+export interface RecommendedActivityApi {
+  gameId: string;
+  gameLabel: string;
+  domain: string;
+  difficulty: "easy" | "medium" | "hard";
+  masteryPct: number;
+  practiceCount: number;
+  reason: string;
+}
+
 export interface DashboardResponse {
   domains: DomainMasteryApi[];
   weakestDomain: string;
   overallProgress: number;
+  recommendedActivity?: RecommendedActivityApi | null;
 }
 
 export interface GeneratePracticeGameResponse {

@@ -11,7 +11,7 @@
  *      see learning/service.py's get_progress_summary).
  *   2. Az900WeakAreas (left) — display-only mastery/practice per domain,
  *      plus "Retake Diagnostic".
- *   3. Az900GameMenu (right) — all 7 games; clicking one opens a domain
+ *   3. Az900GameMenu (right) — curated learning activities; clicking one opens a domain
  *      picker (Az900DomainPicker) rather than launching directly.
  *
  * Domain selection no longer lives here — each game launch asks "which
@@ -24,6 +24,8 @@ import { fetchDashboard } from "../api/client";
 import Az900ProgressBar from "./Az900ProgressBar";
 import Az900WeakAreas from "./Az900WeakAreas";
 import Az900GameMenu from "./Az900GameMenu";
+import Az900RecommendationCard from "./Az900RecommendationCard";
+import type { RecommendedActivityApi } from "../api/client";
 import type { DomainMastery, PlayingGame } from "../types";
 
 interface Props {
@@ -40,15 +42,20 @@ export default function Az900GameWindow({ sessionId, refreshKey, onRetakeDiagnos
   const [weakestDomain, setWeakestDomain] = useState("");
   const [overallProgress, setOverallProgress] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [recommendation, setRecommendation] = useState<RecommendedActivityApi | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
+    setError(null);
     fetchDashboard(sessionId)
       .then((d) => {
         setDomains(d.domains);
         setWeakestDomain(d.weakestDomain);
         setOverallProgress(d.overallProgress);
+        setRecommendation(d.recommendedActivity ?? null);
       })
+      .catch(() => setError("Could not load your dashboard."))
       .finally(() => setLoading(false));
   }, [sessionId, refreshKey]);
 
@@ -63,6 +70,8 @@ export default function Az900GameWindow({ sessionId, refreshKey, onRetakeDiagnos
   return (
     <div className="az900">
       <Az900ProgressBar value={overallProgress} label="Program Progress" />
+      {error && <div className="status-text error">{error}</div>}
+      {recommendation && <Az900RecommendationCard sessionId={sessionId} recommendation={recommendation} onPlay={onPlay} />}
       <div className="az900-window">
         <Az900WeakAreas domains={domains} onRetakeDiagnostic={onRetakeDiagnostic} />
         <Az900GameMenu

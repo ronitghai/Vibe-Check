@@ -8,7 +8,7 @@ into these functions. Three responsibilities:
   1. Run the diagnostic assessment (start_assessment / submit_assessment),
      sampling from the hand-authored QUESTION_BANK in knowledge_base.py —
      never LLM-generated, see that file's docstring for why.
-  2. Generate personalized content for whichever of the 7 template games the
+  2. Generate personalized content for whichever curated learning activity the
      learner picked (generate_practice_content), grounded in one AZ-900
      domain, and launch it through the *existing* game engine — this does
      NOT build a new way to render a game. It calls session_store.upsert_game(),
@@ -33,14 +33,11 @@ from .. import session_store
 from ..games import registry
 from . import store
 from .knowledge_base import (
-    DOMAIN_ICON_THEMES,
     DOMAINS,
     FALLBACK_CROSSWORD,
     FALLBACK_MATCHING,
-    FALLBACK_PHRASE,
     QUESTION_BANK,
     SNIPPETS,
-    get_random_snippet,
     get_snippet_for_topic,
 )
 
@@ -52,9 +49,9 @@ ASSESSMENT_SIZE = 10
 
 QUIZ_GEN_SYSTEM_PROMPT = """You write multiple choice quiz questions for an AZ-900 (Microsoft \
 Azure Fundamentals) study game. You MUST base every question strictly on the provided facts — \
-do not introduce any Azure detail that isn't directly supported by them. Return ONLY a JSON \
-object of the exact shape {"questions": [{"question": string, "choices": [4 strings], \
-"answerIndex": 0-3}, ...]} with no other text, no markdown fences."""
+do not introduce any Azure detail that isn't directly supported by them. Return ONLY a JSON object of the exact shape {"questions": [{"question": string, "choices": [4 strings], "answerIndex": 0-3, "explanation": string}, ...]} with no other text, no markdown fences. Order the questions \
+from easiest to hardest, so the first question is the most foundational and the last question \
+is the most challenging. Keep the difficulty ramping as the learner progresses."""
 
 CROSSWORD_GEN_SYSTEM_PROMPT = """You write short crossword-style word+clue entries for an \
 AZ-900 (Microsoft Azure Fundamentals) study game. You MUST base every word and clue strictly on \
@@ -69,11 +66,68 @@ facts. Return ONLY a JSON object of the exact shape {"pairs": [{"left": string, 
 ...]} with exactly 4 entries, no other text, no markdown fences. "left" is a short term or \
 service name, "right" is a short (under 12 words) definition of it."""
 
-WHEEL_GEN_SYSTEM_PROMPT = """You pick ONE short AZ-900 (Microsoft Azure Fundamentals) vocabulary \
-term or phrase for a guess-the-phrase word game, based strictly on the provided facts. Return \
-ONLY a JSON object of the exact shape {"phrase": string, "category": string} with no other text, \
-no markdown fences. "phrase" must be 2 to 4 words, UPPERCASE letters and spaces only — no \
-punctuation, digits, or numbers. "category" is a short label for the topic."""
+JEOPARDY_GEN_SYSTEM_PROMPT = """
+You create structured Jeopardy-style question boards for Microsoft AZ-900
+certification practice.
+
+Use only the AZ-900 facts supplied by the user.
+
+Return only a JSON object with this exact structure:
+
+{
+  "title": string,
+  "categories": [
+    {
+      "name": string,
+      "questions": [
+        {
+          "value": 100,
+          "question": string,
+          "choices": [string, string, string, string],
+          "answerIndex": 0,
+          "explanation": string
+        },
+        {
+          "value": 200,
+          "question": string,
+          "choices": [string, string, string, string],
+          "answerIndex": 0,
+          "explanation": string
+        },
+        {
+          "value": 300,
+          "question": string,
+          "choices": [string, string, string, string],
+          "answerIndex": 0,
+          "explanation": string
+        },
+        {
+          "value": 400,
+          "question": string,
+          "choices": [string, string, string, string],
+          "answerIndex": 0,
+          "explanation": string
+        }
+      ]
+    }
+  ]
+}
+
+Requirements:
+
+- Exactly 4 categories.
+- Exactly 4 questions per category.
+- Values must be 100, 200, 300, and 400 in that order.
+- Exactly 16 total questions.
+- Exactly 4 answer choices for every question.
+- Questions must increase in difficulty from 100 to 400.
+- Do not duplicate questions.
+- Do not duplicate category names.
+- Every explanation must teach the relevant concept.
+- Do not use free-text answers.
+- Return no Markdown and no text outside the JSON object.
+"""
+
 
 
 # ===========================================================================
@@ -178,6 +232,7 @@ def submit_assessment(session_id: str, assessment_id: str, answers: list[dict]) 
         "score": {"correct": total_correct, "total": total_questions},
         "mastery": progress["domains"],
         "weakestDomain": progress["weakestDomain"],
+        "recommendedActivity": progress.get("recommendedActivity"),
     }
 
 
@@ -208,13 +263,64 @@ def get_progress_summary(session_id: str) -> dict:
     domains = [{**m, "practiceCount": practice_counts.get(m["domain"], 0)} for m in mastery]
 
     avg_mastery_pct = sum(d["masteryPct"] for d in domains) / len(domains)
+    weakest_domain = store.get_weakest_domain(session_id)
 
     return {
         "domains": domains,
-        "weakestDomain": store.get_weakest_domain(session_id),
+        "weakestDomain": weakest_domain,
         "overallProgress": round(avg_mastery_pct),
+        "recommendedActivity": _recommend_next_activity(weakest_domain, domains),
     }
 
+
+def _difficulty_for_mastery(mastery_pct: int) -> str:
+    if mastery_pct < 50:
+        return "easy"
+    if mastery_pct < 75:
+        return "medium"
+    return "hard"
+
+
+def _checkpoint_every(difficulty: str) -> int:
+    return {"easy": 5, "medium": 4, "hard": 3}.get(difficulty, 4)
+
+
+def _time_per_question(difficulty: str) -> int:
+    return {"easy": 18, "medium": 15, "hard": 12}.get(difficulty, 15)
+
+
+def _wheel_max_guesses(difficulty: str) -> int:
+    return {"easy": 12, "medium": 9, "hard": 7}.get(difficulty, 9)
+
+
+def _recommend_next_activity(weakest_domain: str, domains: list[dict]) -> dict:
+    """Select a pedagogically appropriate next activity, not just a fun game."""
+    row = next((d for d in domains if d["domain"] == weakest_domain), None)
+    mastery_pct = row["masteryPct"] if row is not None else 0
+    practice_count = row.get("practiceCount", 0) if row else 0
+
+    if mastery_pct < 45:
+        game_id = "rapid_quiz"
+        label = "Knowledge Check"
+        reason = "Retrieve foundational concepts and review an explanation after every answer."
+    elif mastery_pct < 75:
+        game_id = "scenario_challenge"
+        label = "Azure Scenario Challenge"
+        reason = "Apply the concepts you know to realistic Azure decisions."
+    else:
+        game_id = "matching_game"
+        label = "Concept Connections"
+        reason = "Strengthen links between related services before the next assessment."
+
+    return {
+        "gameId": game_id,
+        "gameLabel": label,
+        "domain": weakest_domain,
+        "difficulty": _difficulty_for_mastery(mastery_pct),
+        "masteryPct": mastery_pct,
+        "practiceCount": practice_count,
+        "reason": reason,
+    }
 
 def record_practice_result(session_id: str, game_id: str, domain: str, correct: int, total: int) -> dict:
     """
@@ -227,7 +333,20 @@ def record_practice_result(session_id: str, game_id: str, domain: str, correct: 
         display ("you've practiced this domain N times").
     Returns the freshly recomputed progress summary.
     """
-    store.record_result(session_id, domain, correct, total)
+    if game_id not in registry.GAMES:
+        raise ValueError(f"Unknown learning activity: {game_id}")
+    if domain not in DOMAINS:
+        raise ValueError(f"Unknown AZ-900 domain: {domain}")
+    if total <= 0 or correct < 0 or correct > total:
+        raise ValueError("Invalid activity result")
+
+    # Assessment/application activities influence mastery more than lightweight
+    # vocabulary review. Scaling both numerator and denominator preserves the
+    # activity's accuracy while reducing how strongly it moves mastery.
+    weight = float(registry.GAMES[game_id].get("mastery_weight", 1.0))
+    weighted_correct = round(correct * weight * 100)
+    weighted_total = round(total * weight * 100)
+    store.record_result(session_id, domain, weighted_correct, weighted_total)
     store.log_attempt(session_id, game_id, domain, correct, total)
     return get_progress_summary(session_id)
 
@@ -242,7 +361,7 @@ def record_practice_result(session_id: str, game_id: str, domain: str, correct: 
 
 def generate_practice_content(session_id: str, game_id: str, domain: str | None = None) -> dict:
     """
-    Generate AZ-900-grounded content for `game_id` (any of the 7 template
+    Generate AZ-900-grounded content for `game_id` (a curated learning-activity
     games) targeting `domain` (or the current weakest domain if omitted/
     invalid), and launch it through the existing game engine — the exact
     same session_store.upsert_game() call every other launch path in the
@@ -256,8 +375,9 @@ def generate_practice_content(session_id: str, game_id: str, domain: str | None 
     target_domain = domain if domain in DOMAINS else store.get_weakest_domain(session_id)
     snippets = SNIPPETS[target_domain]
     facts_text = "\n".join(f"- {s['snippet']}" for s in snippets)
+    mastery_pct = _get_domain_mastery_pct(session_id, target_domain)
 
-    overrides = _build_config_overrides(game_id, target_domain, facts_text)
+    overrides = _build_config_overrides(game_id, target_domain, facts_text, mastery_pct)
     config = registry.merge_config(game_id, overrides)
     title = f"{registry.GAMES[game_id]['title']} — {target_domain}"
 
@@ -266,29 +386,46 @@ def generate_practice_content(session_id: str, game_id: str, domain: str | None 
     return {"game_id": game_id, "game_type": "template", "domain": target_domain}
 
 
-def _build_config_overrides(game_id: str, domain: str, facts_text: str) -> dict:
-    """Dispatch table: which content generator each game_id needs."""
-    if game_id in ("quiz_flyer", "rapid_quiz"):
-        return {"questions": _generate_questions_from_snippets(domain, facts_text)}
+def _build_config_overrides(game_id: str, domain: str, facts_text: str, mastery_pct: int) -> dict:
+    difficulty = _difficulty_for_mastery(mastery_pct)
+    if game_id in {"rapid_quiz", "scenario_challenge"}:
+        questions = _order_questions_by_complexity(
+            _generate_questions_from_snippets(domain, facts_text, scenario=(game_id == "scenario_challenge"))
+        )
+        result = {"questions": questions}
+        if game_id == "rapid_quiz":
+            result["timePerQuestion"] = _time_per_question(difficulty)
+        return result
     if game_id == "crossword":
         return {"words": _generate_crossword_words(domain, facts_text)}
     if game_id == "matching_game":
-        pairs = _generate_matching_pairs(domain, facts_text)
-        return {"title": f"Match the {domain} terms", "pairs": pairs}
-    if game_id == "wheel_of_fortune":
-        return _generate_wheel_phrase(domain, facts_text)  # already {"phrase", "category"}
-    if game_id == "memory_match":
-        # No LLM call — memory_match's mechanic is flip-and-match IDENTICAL
-        # icons, so there's no fact to test, only a theme to apply.
-        return {"theme": domain, "icons": DOMAIN_ICON_THEMES[domain]}
-    if game_id == "tic_tac_toe":
-        # No LLM call, no content slot to test knowledge with — just show a
-        # true, grounded fact before the match (tic_tac_toe.html renders
-        # config.factCard if present).
-        return {"factCard": get_random_snippet(domain)}
-    # Should be unreachable — generate_practice_content() already validated
-    # game_id against registry.GAMES before calling this dispatcher.
+        return {"title": f"Connect the {domain} concepts", "pairs": _generate_matching_pairs(domain, facts_text)}
+    if game_id == "jeopardy":
+        return _generate_jeopardy_config(domain, facts_text)
     return {}
+
+def _get_domain_mastery_pct(session_id: str, domain: str) -> int:
+    mastery = store.get_mastery(session_id)
+    for row in mastery:
+        if row["domain"] == domain:
+            return row["masteryPct"]
+    return 0
+
+
+def _question_complexity(question: dict) -> int:
+    if not isinstance(question, dict):
+        return 0
+    text = question.get("question", "")
+    choices = question.get("choices", [])
+    if not isinstance(choices, list):
+        choices = []
+    return len(str(text)) + sum(len(str(choice)) for choice in choices)
+
+
+def _order_questions_by_complexity(questions: list[dict]) -> list[dict]:
+    if not isinstance(questions, list):
+        return questions
+    return sorted(questions, key=_question_complexity)
 
 
 def _call_llm_json(system_prompt: str, domain: str, facts_text: str) -> dict:
@@ -312,18 +449,33 @@ def _call_llm_json(system_prompt: str, domain: str, facts_text: str) -> dict:
         return {}
 
 
-def _generate_questions_from_snippets(domain: str, facts_text: str) -> list[dict]:
-    """Used by quiz_flyer and rapid_quiz. Falls back to shuffling real
-    QUESTION_BANK entries for this domain if the LLM call fails/is malformed."""
-    parsed = _call_llm_json(QUIZ_GEN_SYSTEM_PROMPT, domain, facts_text)
+def _generate_questions_from_snippets(domain: str, facts_text: str, scenario: bool = False) -> list[dict]:
+    """Create explanation-rich retrieval or scenario questions.
+
+    The hand-authored bank remains the fallback and source of truth. Scenario
+    mode prefers questions with applied wording, while regular mode samples a
+    balanced set for retrieval practice.
+    """
+    prompt = QUIZ_GEN_SYSTEM_PROMPT
+    if scenario:
+        prompt += " Every question must be a short workplace or architecture scenario that asks the learner to choose the best Azure concept or service."
+    parsed = _call_llm_json(prompt, domain, facts_text)
     questions = parsed.get("questions", [])
     if _valid_questions(questions):
-        return questions
+        return questions[:8]
 
     pool = QUESTION_BANK[domain][:]
     random.shuffle(pool)
-    return [{"question": q["question"], "choices": q["choices"], "answerIndex": q["answerIndex"]} for q in pool]
-
+    selected = pool[:8]
+    return [
+        {
+            "question": q["question"],
+            "choices": q["choices"],
+            "answerIndex": q["answerIndex"],
+            "explanation": get_snippet_for_topic(domain, q["topic"]) or "Review this concept in the AZ-900 learning path.",
+        }
+        for q in selected
+    ]
 
 def _generate_crossword_words(domain: str, facts_text: str) -> list[dict]:
     """Used by crossword. Falls back to FALLBACK_CROSSWORD[domain]."""
@@ -342,13 +494,119 @@ def _generate_matching_pairs(domain: str, facts_text: str) -> list[dict]:
         return pairs
     return FALLBACK_MATCHING[domain]
 
+def _generate_jeopardy_config(
+    domain: str,
+    facts_text: str,
+) -> dict:
+    """
+    Generate the structured content consumed by jeopardy.html.
 
-def _generate_wheel_phrase(domain: str, facts_text: str) -> dict:
-    """Used by wheel_of_fortune. Falls back to FALLBACK_PHRASE[domain]."""
-    parsed = _call_llm_json(WHEEL_GEN_SYSTEM_PROMPT, domain, facts_text)
-    if _valid_phrase(parsed):
-        return {"phrase": parsed["phrase"].upper(), "category": parsed["category"]}
-    return FALLBACK_PHRASE[domain]
+    If the LLM response is incomplete or malformed, registry.merge_config()
+    will retain the hand-authored default board from registry.py.
+    """
+    parsed = _call_llm_json(
+        JEOPARDY_GEN_SYSTEM_PROMPT,
+        domain,
+        facts_text,
+    )
+
+    title = parsed.get("title")
+    categories = parsed.get("categories")
+
+    if not isinstance(title, str) or not title.strip():
+        title = f"{domain} Jeopardy"
+
+    if not _valid_jeopardy_categories(categories):
+        return {
+            "title": f"{domain} Jeopardy",
+        }
+
+    return {
+        "title": title.strip(),
+        "categories": categories,
+    }
+
+
+def _valid_jeopardy_categories(categories) -> bool:
+    """
+    Validate the exact structure expected by jeopardy.html.
+    """
+    if not isinstance(categories, list) or len(categories) != 4:
+        return False
+
+    category_names: set[str] = set()
+    expected_values = [100, 200, 300, 400]
+    seen_questions: set[str] = set()
+
+    for category in categories:
+        if not isinstance(category, dict):
+            return False
+
+        name = category.get("name")
+
+        if not isinstance(name, str) or not name.strip():
+            return False
+
+        normalized_name = name.strip().lower()
+
+        if normalized_name in category_names:
+            return False
+
+        category_names.add(normalized_name)
+
+        questions = category.get("questions")
+
+        if not isinstance(questions, list) or len(questions) != 4:
+            return False
+
+        for index, question in enumerate(questions):
+            if not isinstance(question, dict):
+                return False
+
+            if question.get("value") != expected_values[index]:
+                return False
+
+            question_text = question.get("question")
+
+            if not isinstance(question_text, str) or not question_text.strip():
+                return False
+
+            normalized_question = question_text.strip().lower()
+
+            if normalized_question in seen_questions:
+                return False
+
+            seen_questions.add(normalized_question)
+
+            choices = question.get("choices")
+
+            if not isinstance(choices, list) or len(choices) != 4:
+                return False
+
+            if not all(
+                isinstance(choice, str) and choice.strip()
+                for choice in choices
+            ):
+                return False
+
+            answer_index = question.get("answerIndex")
+
+            if (
+                not isinstance(answer_index, int)
+                or not 0 <= answer_index < 4
+            ):
+                return False
+
+            explanation = question.get("explanation")
+
+            if (
+                not isinstance(explanation, str)
+                or not explanation.strip()
+            ):
+                return False
+
+    return True
+
 
 
 # ---------------------------------------------------------------------------
@@ -369,6 +627,8 @@ def _valid_questions(questions) -> bool:
         if not isinstance(choices, list) or len(choices) != 4:
             return False
         if not isinstance(q.get("answerIndex"), int) or not (0 <= q["answerIndex"] < 4):
+            return False
+        if "explanation" in q and (not isinstance(q["explanation"], str) or not q["explanation"].strip()):
             return False
     return True
 
@@ -401,15 +661,3 @@ def _valid_pairs(pairs) -> bool:
     return True
 
 
-def _valid_phrase(data) -> bool:
-    if not isinstance(data, dict):
-        return False
-    phrase = data.get("phrase")
-    category = data.get("category")
-    if not isinstance(phrase, str) or not isinstance(category, str) or not category.strip():
-        return False
-    # Must be letters and spaces only once uppercased, and contain at least
-    # one letter — wheel_of_fortune.html can only ever reveal A-Z guesses,
-    # so any other character would render as a permanently-unsolvable box.
-    upper = phrase.upper()
-    return bool(upper.strip()) and all(c.isalpha() or c == " " for c in upper)

@@ -518,8 +518,36 @@ QUESTION_BANK = {
 }
 
 
+# Additional hand-authored questions aligned to the current AZ-900 skill areas.
+# These increase retake variety and are also used as safe fallbacks for games.
+QUESTION_BANK["Cloud Concepts"].extend([
+    {"topic":"cloud_deployment_models","question":"A company must keep regulated data in its own datacenter but wants to use Azure for temporary peak demand. Which cloud model best fits?","choices":["Public cloud only","Private cloud only","Hybrid cloud","SaaS"],"answerIndex":2},
+    {"topic":"consumption_based_model","question":"Which statement best describes consumption-based pricing?","choices":["Pay a fixed amount regardless of use","Pay only for resources consumed","Purchase all hardware upfront","Pay only when support is contacted"],"answerIndex":1},
+    {"topic":"scaling_types","question":"Adding more VM instances behind a load balancer is an example of what?","choices":["Vertical scaling","Horizontal scaling","Capital expenditure","SaaS"],"answerIndex":1},
+    {"topic":"serverless_computing","question":"Which benefit is most closely associated with serverless computing?","choices":["Managing physical servers directly","Automatic resource allocation and execution-based billing","A fixed number of servers","Owning datacenter hardware"],"answerIndex":1},
+    {"topic":"service_models","question":"A team wants to deploy web code while Azure manages the operating system and runtime. Which model is the best fit?","choices":["IaaS","PaaS","SaaS","Private cloud"],"answerIndex":1},
+    {"topic":"shared_responsibility","question":"Which responsibility always remains with the customer in the cloud?","choices":["Physical datacenter cooling","Host hardware maintenance","Managing data and identities","Replacing failed physical disks"],"answerIndex":2},
+])
+QUESTION_BANK["Azure Architecture & Services"].extend([
+    {"topic":"availability_zones","question":"An application must continue running if one datacenter in an Azure region fails. What should it use?","choices":["A single resource group","Multiple availability zones","One larger VM","One storage account in one datacenter"],"answerIndex":1},
+    {"topic":"networking","question":"A company needs a private dedicated connection from its datacenter to Azure that avoids the public internet. Which service should it choose?","choices":["VPN Gateway","ExpressRoute","Azure DNS","Traffic Manager"],"answerIndex":1},
+    {"topic":"compute_services","question":"Which Azure compute option is best for short event-driven code that should scale automatically?","choices":["Azure Functions","Azure Virtual Machines","Azure Files","Azure DNS"],"answerIndex":0},
+    {"topic":"storage_types","question":"Which Azure storage service is designed for unstructured objects such as images and backups?","choices":["Azure Blob Storage","Azure Disk Storage","Azure Files","Azure DNS"],"answerIndex":0},
+    {"topic":"resource_groups","question":"Which Azure object is a logical container for resources that share a lifecycle?","choices":["Availability Zone","Resource group","Region pair","VNet peering"],"answerIndex":1},
+    {"topic":"storage_redundancy","question":"Which redundancy option copies data across availability zones in one region?","choices":["LRS","ZRS","GRS","Archive tier"],"answerIndex":1},
+])
+QUESTION_BANK["Azure Management & Governance"].extend([
+    {"topic":"policy_blueprints","question":"An organization must prevent resources from being created outside approved regions. Which service should enforce this rule?","choices":["Azure Policy","Azure Advisor","Azure Monitor","Azure Service Health"],"answerIndex":0},
+    {"topic":"resource_locks","question":"Which feature can prevent an administrator from accidentally deleting a critical resource?","choices":["A tag","A resource lock","A budget","A dashboard"],"answerIndex":1},
+    {"topic":"management_tools","question":"Which Azure capability lets teams repeatedly deploy infrastructure from a declarative template?","choices":["ARM templates","Service Health","Pricing Calculator","Azure Advisor"],"answerIndex":0},
+    {"topic":"advisor_monitor","question":"Which service collects metrics and logs and can create alerts for Azure resources?","choices":["Azure Monitor","Azure Policy","Microsoft Purview","Pricing Calculator"],"answerIndex":0},
+    {"topic":"pricing_tools","question":"Which tool should be used before deployment to estimate the expected cost of selected Azure resources?","choices":["Pricing Calculator","Azure Service Health","Azure Arc","Microsoft Entra ID"],"answerIndex":0},
+    {"topic":"rbac_entra","question":"A user should be able to read resources but not modify them. Which Azure feature should assign that permission?","choices":["Azure RBAC","Resource locks","Azure Monitor","Tags"],"answerIndex":0},
+])
+
+
 # ---------------------------------------------------------------------------
-# Content for the other 5 template games (see service.py's
+# Content for the curated learning activities (see service.py's
 # generate_practice_content dispatcher, which routes to a generator per
 # game_id). Two kinds of entry here:
 #
