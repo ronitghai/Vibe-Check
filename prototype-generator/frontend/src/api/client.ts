@@ -123,13 +123,18 @@ export interface MissedExplanation {
 
 /** One row of the progress table for one AZ-900 domain. `practiceCount` is
  * how many practice games have actually been PLAYED (and scored) for this
- * domain — see PlayView's postMessage listener, not a manual click. */
+ * domain — see PlayView's postMessage listener, not a manual click.
+ * `masteryPct` is GATED by concept coverage (see backend service.py's
+ * get_progress_summary) — it can't reach 100 until topicsCovered ==
+ * topicsTotal, no matter how high the underlying accuracy is. */
 export interface DomainMasteryApi {
   domain: string;
   correct: number;
   total: number;
   masteryPct: number;
   practiceCount: number;
+  topicsCovered: number;
+  topicsTotal: number;
 }
 
 export interface AssessmentSubmitResponse {

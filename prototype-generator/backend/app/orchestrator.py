@@ -36,20 +36,39 @@ MAX_TOOL_ROUNDS = 4
 MAX_TOOL_RETRIES = 1
 
 
+# knowledge_base.SNIPPETS now holds ~8 facts per skill-bullet topic (499
+# total across the 3 domains — see that file's docstring for where they came
+# from), not the ~1-per-topic starter set this was originally written
+# against. Dumping all of them into every chat turn's system prompt would
+# make each request needlessly large/slow for no real grounding benefit past
+# a certain point, so cap how many facts per TOPIC (not per domain) go in —
+# this keeps broad coverage across every one of the ~62 topics while keeping
+# the block a reasonable size.
+FACTS_PER_TOPIC = 2
+
+
 def _facts_block() -> str:
     """
-    Build a reference block containing the hand-authored AZ-900 facts from
-    learning/knowledge_base.py.
+    Build a reference block containing AZ-900 facts from
+    learning/knowledge_base.py, capped to FACTS_PER_TOPIC per topic so
+    coverage stays broad (every topic represented) without the block growing
+    unboundedly as more facts get added to the knowledge base over time.
     """
     lines: list[str] = []
 
     for domain in DOMAINS:
         lines.append(f"{domain}:")
 
+        topic_counts: dict[str, int] = {}
         for entry in SNIPPETS[domain]:
+            topic = entry.get("topic", "")
+            if topic_counts.get(topic, 0) >= FACTS_PER_TOPIC:
+                continue
             snippet = entry.get("snippet", "")
-            if snippet:
-                lines.append(f"  - {snippet}")
+            if not snippet:
+                continue
+            topic_counts[topic] = topic_counts.get(topic, 0) + 1
+            lines.append(f"  - {snippet}")
 
     return "\n".join(lines)
 

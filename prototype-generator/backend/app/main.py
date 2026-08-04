@@ -18,7 +18,10 @@ app = FastAPI(title="AZ-900 Study Companion")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5174"],
+    # 5173 is Vite's default dev port (see frontend/vite.config.ts, which sets
+    # no explicit port) — 5174 is also allowed since Vite auto-increments to
+    # it when 5173 is already taken by another process.
+    allow_origins=["http://localhost:5173", "http://localhost:5174"],
     allow_methods=["*"],
     allow_headers=["*"],
 )

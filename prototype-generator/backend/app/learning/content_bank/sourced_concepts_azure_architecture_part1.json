@@ -1,0 +1,151 @@
+{
+  "domain": "Azure Architecture & Services",
+  "bullets": [
+    {
+      "topic": "azure_regions_pairs_sovereign",
+      "bullet": "Describe Azure regions, region pairs, and sovereign regions",
+      "additional_concepts": [
+        {"text": "A region is a set of datacenters in a defined geography that are close enough together to be linked by a low-latency network, and Azure balances workloads across the datacenters within a region automatically.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/5-describe-azure-physical-infrastructure"},
+        {"text": "A handful of Azure services are global rather than regional, meaning you never pick a region for them; examples include Microsoft Entra ID, Azure Traffic Manager, and Azure DNS.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/5-describe-azure-physical-infrastructure"},
+        {"text": "West US/East US and Southeast Asia/East Asia are cited examples of Azure region pairs, and pairing lets Microsoft prioritize restoring one region of a pair first during a widespread outage.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/5-describe-azure-physical-infrastructure"},
+        {"text": "Microsoft staggers planned maintenance rollouts across paired regions one at a time rather than simultaneously, so an update issue is less likely to take down both halves of a pair together.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/5-describe-azure-physical-infrastructure"},
+        {"text": "Pairing isn't always symmetric or geographically local: most pairs back each other up in both directions, but Brazil South only backs up South Central US one-way, and a few newer regions such as Italy North, Poland Central, and Israel Central have no traditional pair at all and instead lean on availability zones and geo-redundant storage.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/5-describe-azure-physical-infrastructure"},
+        {"text": "Azure's government sovereign regions, such as US Gov Virginia and US Gov Arizona, are network-isolated instances run by vetted US personnel with extra compliance certifications, while its China sovereign regions are operated under a separate partnership with 21Vianet rather than directly by Microsoft.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/5-describe-azure-physical-infrastructure"}
+      ]
+    },
+    {
+      "topic": "azure_availability_zones",
+      "bullet": "Describe availability zones",
+      "additional_concepts": [
+        {"text": "Every availability zone-enabled region maintains a minimum of three separate zones so that resiliency doesn't depend on just two failure domains, but not every Azure region has zone support at all.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/5-describe-azure-physical-infrastructure"},
+        {"text": "Zones within a region are linked by private, high-speed fiber-optic connections, which is what allows workloads spread across zones to stay tightly coupled despite being physically isolated.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/5-describe-azure-physical-infrastructure"},
+        {"text": "Zonal services, like a VM or managed disk, are explicitly pinned to run in one chosen zone, whereas zone-redundant services, like zone-redundant storage or SQL Database, replicate automatically across zones without you managing the placement.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/5-describe-azure-physical-infrastructure"},
+        {"text": "A third category, non-regional services, are already resilient at the geography level and remain available even through a region-wide outage, not just a single-zone failure.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/5-describe-azure-physical-infrastructure"},
+        {"text": "Spreading resources across zones can add cost, since replicating data and services between zones may involve inter-zone data transfer charges that a single-zone deployment wouldn't incur.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/5-describe-azure-physical-infrastructure"}
+      ]
+    },
+    {
+      "topic": "azure_datacenters",
+      "bullet": "Describe Azure datacenters",
+      "additional_concepts": [
+        {"text": "Azure's physical infrastructure is organized as a hierarchy that runs from geography down to region, then to availability zone, and finally to the individual datacenter.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/5-describe-azure-physical-infrastructure"},
+        {"text": "Each Azure datacenter is a facility of server racks with its own dedicated power, cooling, and networking, conceptually similar to an on-premises datacenter but built and operated at a much larger scale.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/5-describe-azure-physical-infrastructure"},
+        {"text": "Customers never manage or directly select individual datacenters; instead, Azure exposes datacenters to users only indirectly, grouped into the regions and availability zones you deploy resources into.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/5-describe-azure-physical-infrastructure"},
+        {"text": "Microsoft provides an interactive Global Infrastructure map site where you can explore how Azure's underlying datacenters, regions, and network are laid out worldwide.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/5-describe-azure-physical-infrastructure"},
+        {"text": "An availability zone is itself made up of one or more datacenters, meaning a single zone can span multiple datacenter buildings that still share the zone's independent power and network isolation boundary.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/5-describe-azure-physical-infrastructure"}
+      ]
+    },
+    {
+      "topic": "azure_resources_and_resource_groups",
+      "bullet": "Describe Azure resources and resource groups",
+      "additional_concepts": [
+        {"text": "A resource is the fundamental unit of Azure - anything you provision, such as a VM, virtual network, or database, counts as a resource, and every one of them must live in exactly one resource group at a time.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/6-describe-azure-management-infrastructure"},
+        {"text": "While a resource can be moved from one resource group to another, resource groups themselves cannot be nested inside each other and cannot be renamed once created, so it pays to settle on a naming convention early.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/6-describe-azure-management-infrastructure"},
+        {"text": "Access grants and deny assignments applied at the resource group level cascade to every resource inside it, and deleting the group permanently deletes all the resources it contains.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/6-describe-azure-management-infrastructure"},
+        {"text": "A common pattern is to put all the resources for a temporary environment, like a short-lived dev/test setup, into one resource group so the whole thing can be torn down with a single delete action.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/6-describe-azure-management-infrastructure"},
+        {"text": "Microsoft doesn't prescribe one correct way to organize resource groups; teams running several projects often give each project its own group so that access and visibility stay scoped to the right team.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/6-describe-azure-management-infrastructure"}
+      ]
+    },
+    {
+      "topic": "azure_subscriptions",
+      "bullet": "Describe subscriptions",
+      "additional_concepts": [
+        {"text": "A subscription acts as both a billing container and an access-control boundary, and it links back to an Azure account, which is ultimately an identity in Microsoft Entra ID or a directory Entra ID trusts.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/6-describe-azure-management-infrastructure"},
+        {"text": "One Azure account only needs a single subscription to function, but it can hold many; a multi-subscription account can apply different billing models and different access policies to each one.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/6-describe-azure-management-infrastructure"},
+        {"text": "The billing boundary and the access-control boundary are the two defined boundary types for a subscription: billing determines how invoices are generated per subscription, while access control determines what management policies and spending limits apply within it.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/6-describe-azure-management-infrastructure"},
+        {"text": "Organizations frequently split subscriptions along lifecycle-environment lines, for instance keeping sandbox, development, test, and production in separate subscriptions since access control is naturally enforced at that level.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/6-describe-azure-management-infrastructure"},
+        {"text": "Separate subscriptions per team, workload, or department also make it easier to track and attribute costs, since each subscription generates its own distinct billing report.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/6-describe-azure-management-infrastructure"}
+      ]
+    },
+    {
+      "topic": "azure_management_groups",
+      "bullet": "Describe management groups",
+      "additional_concepts": [
+        {"text": "Management groups sit above subscriptions in Azure's hierarchy and exist specifically so that governance conditions, like access policies or compliance rules, can be applied once and inherited by every subscription grouped underneath.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/6-describe-azure-management-infrastructure"},
+        {"text": "Management groups support nesting up to six levels deep, not counting the root level or the subscription level itself, letting you shape the hierarchy to mirror your organization's structure.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/6-describe-azure-management-infrastructure"},
+        {"text": "Every Microsoft Entra tenant automatically has one Tenant Root Group at the very top, and all other management groups and subscriptions in that tenant ultimately roll up underneath it.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/6-describe-azure-management-infrastructure"},
+        {"text": "A single Azure RBAC role assignment made at the management group level automatically extends to every subscription, resource group, and resource nested beneath it, removing the need to script access individually across each subscription.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/6-describe-azure-management-infrastructure"},
+        {"text": "A policy set at the management group level, such as restricting VM deployment to a specific region, is enforced on every subscription and resource underneath it, and individual resource or subscription owners cannot override it.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/6-describe-azure-management-infrastructure"},
+        {"text": "A single Azure directory can contain up to 10,000 management groups, and each management group or subscription is limited to exactly one parent in the hierarchy.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/6-describe-azure-management-infrastructure"}
+      ]
+    },
+    {
+      "topic": "azure_governance_hierarchy",
+      "bullet": "Describe the hierarchy of resource groups, subscriptions, and management groups",
+      "additional_concepts": [
+        {"text": "Azure's governance scopes nest in a strict top-down order: management groups contain subscriptions, subscriptions contain resource groups, and resource groups contain the individual resources, with policy and access flowing downward through every layer.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/6-describe-azure-management-infrastructure"},
+        {"text": "This layered structure mirrors how account scope works more broadly: an Azure account can span multiple subscriptions (for example, dev/test versus production), and each of those subscriptions can hold multiple resource groups organizing resources by function.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/3-get-started-azure-accounts"},
+        {"text": "For a small deployment, resource groups nested inside a single subscription may be all the structure you need; management groups become useful once an organization has many subscriptions spread across multiple teams or geographies that need consistent governance.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/6-describe-azure-management-infrastructure"},
+        {"text": "Inheritance is the mechanism that ties the hierarchy together: a resource inherits settings from its resource group, a subscription's resources inherit conditions applied at the subscription, and subscriptions inherit governance conditions from the management groups they sit under.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/6-describe-azure-management-infrastructure"},
+        {"text": "Because each level has only one parent, tracing any single resource up through its resource group, subscription, and chain of management groups always yields one unambiguous path to the Tenant Root Group.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-core-architectural-components-of-azure/6-describe-azure-management-infrastructure"}
+      ]
+    },
+    {
+      "topic": "compare_compute_types",
+      "bullet": "Compare compute types, including containers, virtual machines, and functions",
+      "additional_concepts": [
+        {"text": "Virtual machines require you, not Azure, to manage the guest operating system, applying patches and updates yourself, whereas with a container you never manage an OS at all - each VM runs its own full OS, while many containers can share a single host OS.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-compute-networking-services/5-containers"},
+        {"text": "Containers are deliberately lightweight compared to VMs, which lets them be created, scaled out, and stopped dynamically, and lets them restart quickly after a crash rather than requiring a full OS boot cycle.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-compute-networking-services/5-containers"},
+        {"text": "Azure Functions differs from both VMs and containers in that its underlying compute doesn't need to stay continuously running; an incoming event wakes the function, and Azure deallocates the resources again once it finishes.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-compute-networking-services/6-functions"},
+        {"text": "Because Functions only bills for the CPU time actually consumed while code executes, it economically favors short, event-triggered tasks, while VMs and containers are typically billed for the time they're provisioned and running regardless of whether they're actively doing work.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-compute-networking-services/6-functions"},
+        {"text": "Containers are well suited to microservice designs where a solution is broken into independent pieces, such as separate containers for a front end, back end, and storage layer, so each piece can be scaled or updated on its own without touching the others.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-compute-networking-services/5-containers"}
+      ]
+    },
+    {
+      "topic": "vm_options_scale_sets_avsets_avd",
+      "bullet": "Describe virtual machine options, including Azure virtual machines, Azure Virtual Machine Scale Sets, availability sets, and Azure Virtual Desktop",
+      "additional_concepts": [
+        {"text": "Azure VMs are an infrastructure-as-a-service offering, meaning you get full control over the operating system and can install custom software, at the cost of remaining responsible for patching and configuration that a managed service would otherwise handle.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-compute-networking-services/2-virtual-machines"},
+        {"text": "Without scale sets, keeping a fleet of load-balanced VMs consistent means manually applying the same configuration to each one and manually watching utilization to decide when to add or remove instances; Virtual Machine Scale Sets automate that by managing a group of identical VMs and scaling the count out or in based on demand or a schedule.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-compute-networking-services/2-virtual-machines"},
+        {"text": "Availability sets protect against localized failures within a single region by grouping VMs into update domains, which control which VMs can be rebooted together during planned maintenance, and fault domains, which group VMs that share a common power or network failure point.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-compute-networking-services/2-virtual-machines"},
+        {"text": "Using an availability set doesn't add its own charge - you only pay for the underlying VM instances - and in regions where availability zones are supported, a zone-based design is often favored over availability sets because it isolates failures across physically separate datacenters rather than just within one.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-compute-networking-services/2-virtual-machines"},
+        {"text": "Azure Virtual Desktop is a managed desktop and app virtualization service that keeps Windows sessions running in Azure rather than on the local device, and it supports both single-session and multi-session Windows experiences depending on the workload.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-compute-networking-services/4-virtual-desktop"}
+      ]
+    },
+    {
+      "topic": "vm_required_resources",
+      "bullet": "Describe the resources required for virtual machines",
+      "additional_concepts": [
+        {"text": "Provisioning a VM requires choosing three categories of resources together: a size that determines processor and RAM capacity, one or more storage disks, and networking components such as a virtual network, public IP address, and port configuration.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-compute-networking-services/2-virtual-machines"},
+        {"text": "VM sizes are grouped into named families tuned for different workloads - for example B-series for burstable, cost-efficient dev/test workloads, D-series as general purpose, E-series for memory-optimized workloads like in-memory databases, and N-series for GPU-enabled AI or graphics workloads.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-compute-networking-services/2-virtual-machines"},
+        {"text": "A VM's size name encodes its configuration - in a name like Standard_D2s_v5, D identifies the family, 2 gives the vCPU count, the s indicates Premium SSD support, and v5 indicates the hardware generation.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-compute-networking-services/2-virtual-machines"},
+        {"text": "Rather than building a VM from scratch, you can deploy quickly from a prebuilt image, which is a template that already bundles an operating system with supporting tools such as web hosting components.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-compute-networking-services/2-virtual-machines"},
+        {"text": "Beyond the base size, sizing decisions also involve tunable dimensions like disk configuration (which affects capacity, IOPS, and throughput) and network throughput (which affects data transfer performance into and out of the VM).", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-compute-networking-services/2-virtual-machines"}
+      ]
+    },
+    {
+      "topic": "app_hosting_options",
+      "bullet": "Describe application hosting options, including web apps, containers, and virtual machines",
+      "additional_concepts": [
+        {"text": "Hosting choices form a spectrum: VMs give the most control over the environment but the most operational responsibility, containers isolate and manage pieces of the solution independently, and Azure App Service trades away infrastructure control for the least operational effort.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-compute-networking-services/7-describe-application-hosting-options"},
+        {"text": "Azure App Service is an HTTP-based hosting service that lets you build web apps, background jobs, mobile back-ends, and RESTful APIs without managing the underlying infrastructure, and it supports multiple languages and frameworks including .NET, Java, PHP, Python, and Node.js on either Windows or Linux.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-compute-networking-services/7-describe-application-hosting-options"},
+        {"text": "All App Service app types - web apps, API apps, WebJobs, and mobile apps - run on the same underlying infrastructure and therefore share the same built-in benefits: integrated deployment and management, secured endpoints, fast scaling, and built-in load balancing for high availability.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-compute-networking-services/7-describe-application-hosting-options"},
+        {"text": "The WebJobs feature of App Service lets you run a background program or script - such as a .exe, Java, PHP, Python, Node.js executable, or a PowerShell/Bash script - on a schedule or trigger in the same context as a web, API, or mobile app.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-compute-networking-services/7-describe-application-hosting-options"},
+        {"text": "App Service supports continuous deployment by automating builds from source repositories such as GitHub, Azure DevOps, or any Git repo, so new code can be pushed to the hosted app without manual redeployment steps.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-compute-networking-services/7-describe-application-hosting-options"}
+      ]
+    },
+    {
+      "topic": "virtual_networking_fundamentals",
+      "bullet": "Describe virtual networking, including the purpose of Azure virtual networks, subnets, peering, Azure DNS, Azure VPN Gateway, and ExpressRoute",
+      "additional_concepts": [
+        {"text": "A virtual network's private IP address space is defined when it's created and can be divided into subnets, each allocated a portion of that address space; the range only exists inside the virtual network and isn't routable on the public internet.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-networking-services/2-virtual-network"},
+        {"text": "Virtual network peering connects two virtual networks directly so resources in each can communicate, and traffic between peered networks travels privately over the Microsoft backbone network rather than the public internet - even when the peered networks sit in different regions.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-networking-services/2-virtual-network"},
+        {"text": "On-premises networks can connect into an Azure virtual network three ways: a point-to-site VPN from a single client device, a site-to-site VPN linking an on-premises gateway to an Azure VPN gateway, or ExpressRoute for a dedicated private connection that avoids the internet entirely.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-networking-services/2-virtual-network"},
+        {"text": "A VPN gateway must be designated as either policy-based, which statically matches packets against defined IP address sets to pick a tunnel, or route-based, which models tunnels as virtual network interfaces and lets IP routing decide the path - route-based is generally preferred for on-premises devices because it adapts more easily to topology changes.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-networking-services/3-virtual-private-networks"},
+        {"text": "Only one VPN gateway can be deployed per virtual network, but that single gateway can serve multiple simultaneous connections to different on-premises sites or other virtual networks; by default it's deployed as an active/standby pair so a failover is automatic if the active instance goes down.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-networking-services/3-virtual-private-networks"},
+        {"text": "ExpressRoute Global Reach lets two on-premises sites that each have their own ExpressRoute circuit exchange traffic with each other over the Microsoft network, so, for example, an office in Asia and a datacenter in Europe could communicate without that traffic ever crossing the public internet.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-networking-services/4-expressroute"}
+      ]
+    },
+    {
+      "topic": "public_and_private_endpoints",
+      "bullet": "Define public and private endpoints",
+      "additional_concepts": [
+        {"text": "A public endpoint is reachable from anywhere on the internet because it's assigned a public IP address, while a private endpoint only has an IP address drawn from within a virtual network's own private address space and isn't internet-routable.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-networking-services/2-virtual-network"},
+        {"text": "You can enable inbound internet connectivity to a resource either by assigning it a public IP address directly or by placing it behind a public load balancer, which distributes incoming traffic across multiple backend instances.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-networking-services/2-virtual-network"},
+        {"text": "Service endpoints extend a virtual network's private routing to certain Azure PaaS resource types, such as Azure SQL Database and storage accounts, letting resources reach them without that traffic needing a public endpoint.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-networking-services/2-virtual-network"},
+        {"text": "Traffic to a private endpoint stays inside Microsoft's private network, which is what makes private connectivity options like ExpressRoute meaningfully more secure than internet-facing public endpoints for sensitive or high-compliance traffic.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-networking-services/4-expressroute"},
+        {"text": "Even organizations that rely on private connectivity like ExpressRoute still depend on some public endpoints in practice, since services such as DNS resolution, certificate revocation list checks, and Azure CDN requests continue to travel over the public internet regardless of a private connection being in place.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-networking-services/4-expressroute"}
+      ]
+    }
+  ]
+}

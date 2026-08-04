@@ -37,6 +37,21 @@
   background: var(--border);
 }
 
+/* Destructive action (Reset Progress) — visually distinct from
+   .btn-secondary so it doesn't read as just another neutral option next to
+   "Retake Diagnostic". Still confirm-gated in Az900WeakAreas before this
+   ever fires, this is just the visual warning. */
+.btn-danger {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  margin-left: 10px;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger-bg);
+}
+
 .app-main {
   flex: 1;
   min-height: 0;
@@ -551,9 +566,19 @@
   color: var(--text-muted);
 }
 
-.az900-retake-btn {
-  margin-left: 0; /* .btn-secondary defaults to margin-left:10px for inline pairing; this button stands alone */
+.az900-retake-btn,
+.az900-reset-btn {
+  margin-left: 0; /* .btn-secondary/.btn-danger default to margin-left:10px for inline pairing; these stand alone, stacked */
   width: 100%;
+}
+
+/* Total concept-coverage line under the top progress bar (see
+   Az900GameWindow.tsx) — explains why the bar can sit well below 100% even
+   at perfect accuracy. */
+.az900-coverage-line {
+  padding: 8px 32px 0;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .az900-menu {

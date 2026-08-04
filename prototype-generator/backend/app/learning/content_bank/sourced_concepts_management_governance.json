@@ -1,0 +1,174 @@
+{
+  "domain": "Azure Management & Governance",
+  "bullets": [
+    {
+      "topic": "factors_affecting_costs",
+      "bullet": "Describe factors that can affect costs in Azure",
+      "additional_concepts": [
+        {"text": "Azure uses a consumption-based (pay-as-you-go) billing model, so cost scales directly with how much of a resource is actually used during a billing period, rather than requiring upfront capital purchases.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cost-management-azure/2-describe-factors-affect-costs-azure"},
+        {"text": "The specific configuration chosen for a resource, such as a storage account's redundancy tier or a VM's core count and OS licensing, directly changes its price, and identical resources can cost different amounts purely because they are deployed in different Azure regions.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cost-management-azure/2-describe-factors-affect-costs-azure"},
+        {"text": "Azure offers several consumption pricing models beyond standard pay-as-you-go, including Reservations (one- or three-year commitments for a lower rate), the Azure savings plan for compute (committing to an hourly spend rather than a specific VM type), and Spot Virtual Machines (discounted but interruptible capacity for fault-tolerant workloads).", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cost-management-azure/2-describe-factors-affect-costs-azure"},
+        {"text": "Poor resource hygiene increases cost: deleting a VM does not automatically remove dependent resources such as its attached storage or networking, so leftover orphaned resources can keep generating charges until they are proactively cleaned up.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cost-management-azure/2-describe-factors-affect-costs-azure"},
+        {"text": "Data transfer cost depends on geography: a billing zone is a grouping of Azure regions used specifically for data-transfer pricing (distinct from availability zones), and moving data within a zone is generally cheaper than moving it across distant regions; inbound data transfer into Azure is often free, while outbound transfer is billed based on zone.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cost-management-azure/2-describe-factors-affect-costs-azure"},
+        {"text": "Subscription type affects cost exposure: an Azure free trial subscription bundles a spending credit usable within the first 30 days plus 12 months of access to select free services, while resources purchased through Azure Marketplace add third-party vendor charges on top of the underlying Azure infrastructure cost, with billing terms set by the vendor.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cost-management-azure/2-describe-factors-affect-costs-azure"}
+      ]
+    },
+    {
+      "topic": "pricing_calculator",
+      "bullet": "Explore the pricing calculator",
+      "additional_concepts": [
+        {"text": "The Azure pricing calculator produces estimate-only figures for planning purposes; using it does not provision any actual resources and does not generate any charges.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cost-management-azure/3-compare-pricing-total-cost-of-ownership-calculators"},
+        {"text": "Estimates in the calculator can be built resource-by-resource, assembled into a full multi-resource solution, or started from a pre-built example scenario provided by Microsoft.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cost-management-azure/3-compare-pricing-total-cost-of-ownership-calculators"},
+        {"text": "The calculator supports modeling storage-specific settings that influence price, such as data type, access tier, and redundancy option, in addition to compute and network cost estimates.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cost-management-azure/3-compare-pricing-total-cost-of-ownership-calculators"},
+        {"text": "Because the same set of resources can be re-priced across different regions, service tiers, and redundancy settings, the calculator lets teams compare deployment options side by side before an architecture is finalized.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cost-management-azure/3-compare-pricing-total-cost-of-ownership-calculators"},
+        {"text": "Organizations commonly use a pricing calculator estimate as an initial baseline for budget approval and revisit it as architecture decisions change; the separate Total Cost of Ownership (TCO) calculator that Microsoft previously offered alongside it has since been retired.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cost-management-azure/3-compare-pricing-total-cost-of-ownership-calculators"}
+      ]
+    },
+    {
+      "topic": "cost_management_capabilities",
+      "bullet": "Describe cost management capabilities in Azure",
+      "additional_concepts": [
+        {"text": "Cost Management is built around three core capabilities: cost analysis for visualizing spend, cost alerts for threshold-based notifications, and budgets for setting and enforcing spending limits.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cost-management-azure/6-describe-azure-tool"},
+        {"text": "Cost analysis lets you break spend down by dimensions such as subscription, resource group, service, or billing period, which helps pinpoint exactly where money is going and whether costs are trending upward over time.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cost-management-azure/6-describe-azure-tool"},
+        {"text": "Because Azure allows resources to be provisioned instantly and globally, unplanned or forgotten deployments can silently accumulate cost; Cost Management exists specifically to surface that kind of hidden spend before it appears as a surprise on an invoice.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cost-management-azure/6-describe-azure-tool"},
+        {"text": "Cost alerts fall into three categories: budget alerts triggered by a defined spend threshold, credit alerts generated automatically at 90% and 100% of an Enterprise Agreement customer's prepaid Azure balance, and department spending quota alerts specific to Enterprise Agreement customers.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cost-management-azure/6-describe-azure-tool"},
+        {"text": "A budget can be scoped to a subscription, resource group, service type, or other criteria, and can optionally trigger automated actions, such as shutting down or resizing non-production resources, once spending crosses a defined threshold.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cost-management-azure/6-describe-azure-tool"},
+        {"text": "Budgets can be created either in the Azure portal, where they are defined by cost, or through the Azure Consumption API, which additionally supports defining budgets based on consumption usage rather than only cost.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cost-management-azure/6-describe-azure-tool"}
+      ]
+    },
+    {
+      "topic": "purpose_of_tags",
+      "bullet": "Describe the purpose of tags",
+      "additional_concepts": [
+        {"text": "A tag is a name/value pair of metadata attached to an Azure resource; tags do not automatically inherit from a subscription or resource group down to the resources within it, so each level's tags must be applied deliberately.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cost-management-azure/7-describe-purpose-of-tags"},
+        {"text": "Beyond cost reporting, tags support several distinct organizational uses: locating resources tied to a specific team, environment, or workload; classifying data by sensitivity level; and flagging resources subject to a regulatory framework such as ISO 27001.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cost-management-azure/7-describe-purpose-of-tags"},
+        {"text": "Tags can be created, edited, or removed through several interfaces, including the Azure portal, PowerShell, the Azure CLI, ARM templates, or the REST API.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cost-management-azure/7-describe-purpose-of-tags"},
+        {"text": "Azure Policy can enforce a tagging strategy automatically, for example by requiring a specific tag on every newly created resource or by re-applying a tag that was manually removed.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cost-management-azure/7-describe-purpose-of-tags"},
+        {"text": "Not every resource needs every tag; a team might choose to apply a tag such as an operational-impact tag only to the subset of resources where that classification is actually meaningful, leaving other resources untagged for that field.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cost-management-azure/7-describe-purpose-of-tags"}
+      ]
+    },
+    {
+      "topic": "microsoft_purview",
+      "bullet": "Describe the purpose of Microsoft Purview in Azure",
+      "additional_concepts": [
+        {"text": "Microsoft Purview unifies governance and compliance visibility across on-premises systems, multicloud platforms, and SaaS applications into a single view of an organization's overall data landscape.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-azure-for-governance-compliance/2-describe-purpose-microsoft-purview"},
+        {"text": "Purview is organized into two solution areas: risk and compliance, and unified data governance, each addressing a different aspect of managing organizational data.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-azure-for-governance-compliance/2-describe-purpose-microsoft-purview"},
+        {"text": "Purview's risk and compliance capabilities draw heavily on Microsoft 365 services such as Teams, OneDrive, and Exchange to help protect sensitive data and track regulatory compliance obligations.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-azure-for-governance-compliance/2-describe-purpose-microsoft-purview"},
+        {"text": "Purview's unified data governance capabilities extend beyond Azure, covering data stored in SQL and Hive databases, on-premises systems, and even other cloud providers such as Amazon S3.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-azure-for-governance-compliance/2-describe-purpose-microsoft-purview"},
+        {"text": "Core Purview capabilities include automated discovery of data across an estate, classification of sensitive data, and generation of end-to-end data lineage so organizations can trace how information moves and is used.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-azure-for-governance-compliance/2-describe-purpose-microsoft-purview"}
+      ]
+    },
+    {
+      "topic": "azure_policy",
+      "bullet": "Describe the purpose of Azure Policy",
+      "additional_concepts": [
+        {"text": "Related individual policies can be grouped into an initiative to track compliance toward a larger goal; Microsoft's built-in initiative for enabling monitoring recommendations, for example, bundles over 100 separate policy definitions under one assignment.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-azure-for-governance-compliance/3-describe-purpose-azure-policy"},
+        {"text": "Policies assigned at a higher scope, such as a resource group, are automatically inherited by everything nested beneath it, so a single assignment cascades down to every resource created within that scope.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-azure-for-governance-compliance/3-describe-purpose-azure-policy"},
+        {"text": "Azure Policy does not just flag noncompliant resources after they exist — it can prevent a noncompliant resource from being created in the first place, and it continuously evaluates resources that were already deployed before the policy was defined.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-azure-for-governance-compliance/3-describe-purpose-azure-policy"},
+        {"text": "Some policies support automatic remediation, such as adding a required tag that is missing from a resource rather than only reporting the gap; individual resources can still be marked as exceptions when a policy shouldn't apply to them.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-azure-for-governance-compliance/3-describe-purpose-azure-policy"},
+        {"text": "Azure Policy integrates with Azure DevOps so policy checks can be enforced as part of a continuous integration/continuous delivery pipeline's pre-deployment and post-deployment phases.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-azure-for-governance-compliance/3-describe-purpose-azure-policy"},
+        {"text": "Azure Policy also governs changes proposed through AI-assisted tooling such as Copilot in Azure: guardrails like allowed regions, mandatory tags, approved resource SKUs, and security baselines are enforced the same way regardless of whether a person or an AI assistant proposed the change.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-azure-for-governance-compliance/3-describe-purpose-azure-policy"}
+      ]
+    },
+    {
+      "topic": "resource_locks",
+      "bullet": "Describe the purpose of resource locks",
+      "additional_concepts": [
+        {"text": "Resource locks are a safety layer separate from Azure RBAC — even a user with full owner-level permissions on a resource must remove an active lock before they can delete or modify that resource.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-azure-for-governance-compliance/4-describe-purpose-resource-locks"},
+        {"text": "A Delete lock still allows authorized users to read and modify a resource but blocks deletion, while a ReadOnly lock blocks both modification and deletion, effectively limiting all authorized users to Reader-level access regardless of their assigned role.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-azure-for-governance-compliance/4-describe-purpose-resource-locks"},
+        {"text": "Locks can be scoped to an individual resource, a resource group, or an entire subscription, and like policies they are inherited downward, so a lock placed on a resource group automatically applies to every resource inside it.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-azure-for-governance-compliance/4-describe-purpose-resource-locks"},
+        {"text": "Locks can be viewed, added, or removed through the Locks section of a resource's Settings pane in the Azure portal, or through PowerShell, the Azure CLI, or an ARM template.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-azure-for-governance-compliance/4-describe-purpose-resource-locks"},
+        {"text": "Changing or deleting a locked resource is a deliberate two-step process: the lock must be explicitly removed first, and only then can the otherwise-blocked action be performed.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-azure-for-governance-compliance/4-describe-purpose-resource-locks"}
+      ]
+    },
+    {
+      "topic": "azure_portal",
+      "bullet": "Describe the Azure portal",
+      "additional_concepts": [
+        {"text": "The Azure portal is a web-based graphical interface for managing a subscription, offering an alternative to command-line tools, and it includes the ability to build custom dashboards tailored to how a user wants to view their resources.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/2-describe-interacting-azure"},
+        {"text": "The portal is engineered for high availability by maintaining a presence in every Azure datacenter, which both protects against a single datacenter outage taking the portal offline and keeps the interface physically closer to users to reduce latency.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/2-describe-interacting-azure"},
+        {"text": "The Azure portal updates continuously in place, so new features and fixes roll out without requiring a scheduled maintenance window or downtime.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/2-describe-interacting-azure"},
+        {"text": "Beyond deployment and monitoring, the portal includes configurable accessibility options intended to support an optimal experience for users with different needs.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/2-describe-interacting-azure"},
+        {"text": "Copilot in Azure is an AI assistant available within the portal experience that provides natural-language, contextual help for tasks such as exploring services or drafting commands; at a fundamentals level, its suggestions should still be reviewed and validated before being applied, especially in production.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/2-describe-interacting-azure"}
+      ]
+    },
+    {
+      "topic": "cloud_shell_cli_powershell",
+      "bullet": "Describe Azure Cloud Shell, Azure CLI, and Azure PowerShell",
+      "additional_concepts": [
+        {"text": "Azure Cloud Shell is browser-based and requires no local installation; it is automatically authenticated with the credentials and permissions of the signed-in user and is accessible directly from an icon within the Azure portal.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/2-describe-interacting-azure"},
+        {"text": "Cloud Shell gives users a choice of shell environment, supporting both Azure PowerShell and the Bash-based Azure CLI within the same browser session.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/2-describe-interacting-azure"},
+        {"text": "Azure PowerShell commands are called cmdlets and call the Azure REST API under the hood to perform management actions; they can be run individually for one-off changes or combined into scripts to orchestrate complex, repeatable tasks such as deploying an entire multi-resource environment.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/2-describe-interacting-azure"},
+        {"text": "The Azure CLI offers the same range of capabilities as Azure PowerShell, from handling a single discrete task to orchestrating complex deployments, but uses Bash-style command syntax instead of PowerShell syntax, so the choice between the two often comes down to which syntax an administrator already knows.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/2-describe-interacting-azure"},
+        {"text": "Both Azure PowerShell and the Azure CLI can be installed locally on Windows, Linux, and macOS in addition to being available through Cloud Shell, so scripts written for either tool also run outside the browser.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/2-describe-interacting-azure"}
+      ]
+    },
+    {
+      "topic": "azure_arc",
+      "bullet": "Describe the purpose of Azure Arc",
+      "additional_concepts": [
+        {"text": "Azure Arc extends Azure Resource Manager's governance and monitoring reach beyond Azure itself by projecting non-Azure resources, such as an on-premises server or a VM running in another public cloud, into Azure Resource Manager so they can be managed as if they were native Azure resources.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/3-describe-purpose-of-azure-arc"},
+        {"text": "Azure Arc currently supports managing several resource types hosted outside Azure, including servers, Kubernetes clusters, Azure data services, SQL Server instances, and, in preview, virtual machines.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/3-describe-purpose-of-azure-arc"},
+        {"text": "Because Arc-connected resources appear inside Azure Resource Manager, organizations can apply the same governance tools, such as Azure Policy and tagging, consistently across Azure, on-premises, and multicloud resources instead of managing each environment separately with disconnected tooling.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/3-describe-purpose-of-azure-arc"},
+        {"text": "Azure Arc lets organizations continue using established IT operations practices while gradually introducing DevOps patterns, rather than requiring an all-at-once migration to cloud-native processes.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/3-describe-purpose-of-azure-arc"},
+        {"text": "Azure Arc-enabled Kubernetes clusters support custom locations, an abstraction layer that lets other Azure services be deployed on top of the Arc-connected cluster and its extensions as though it were an Azure region.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/3-describe-purpose-of-azure-arc"}
+      ]
+    },
+    {
+      "topic": "infrastructure_as_code",
+      "bullet": "Describe infrastructure as code (IaC)",
+      "additional_concepts": [
+        {"text": "Infrastructure as code is the practice of defining and managing infrastructure through code and reusable templates rather than through manual, one-off configuration steps performed in a console.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/4-describe-azure-resource-manager-azure-arm-templates"},
+        {"text": "IaC adoption in Azure can start small, using individual Azure CLI or Azure PowerShell commands, and grow into fully repeatable, template-driven deployments using ARM templates or Bicep.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/4-describe-azure-resource-manager-azure-arm-templates"},
+        {"text": "A key IaC benefit is repeatability: the same template can be deployed multiple times across different environments, such as dev, test, and production, and produce a consistent, predictable result each time.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/4-describe-azure-resource-manager-azure-arm-templates"},
+        {"text": "IaC templates in Azure are declarative — they describe the desired end state of the infrastructure, and the underlying deployment engine determines how to reach that state, rather than the author scripting each step imperatively.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/4-describe-azure-resource-manager-azure-arm-templates"},
+        {"text": "Bicep is Microsoft's newer, more concise declarative language for authoring Azure deployments; compared to writing raw JSON ARM templates, Bicep is generally easier to read and write while producing the same deployment outcome through Azure Resource Manager.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/4-describe-azure-resource-manager-azure-arm-templates"}
+      ]
+    },
+    {
+      "topic": "arm_and_templates",
+      "bullet": "Describe Azure Resource Manager (ARM) and ARM templates",
+      "additional_concepts": [
+        {"text": "Azure Resource Manager is the management layer that every request to create, update, or delete an Azure resource passes through, regardless of whether the request originates from the portal, the CLI, PowerShell, an SDK, or a direct API call.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/4-describe-azure-resource-manager-azure-arm-templates"},
+        {"text": "ARM authenticates and authorizes each incoming request before forwarding it to the appropriate Azure service, which is why different management tools produce consistent results and capabilities — they all funnel through the same underlying API.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/4-describe-azure-resource-manager-azure-arm-templates"},
+        {"text": "An ARM template is a JSON file that declaratively defines the resources to deploy; Azure validates the template's syntax and resource definitions before deployment begins, then orchestrates resource creation, running independent resources in parallel and ordering dependent ones correctly.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/4-describe-azure-resource-manager-azure-arm-templates"},
+        {"text": "Deploying resources as a single ARM template, rather than provisioning them individually, lets a whole solution be managed, monitored, and redeployed as one group with confidence that the outcome stays consistent throughout the application's development lifecycle.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/4-describe-azure-resource-manager-azure-arm-templates"},
+        {"text": "Because RBAC is natively built into Azure Resource Manager, access control can be applied uniformly to every resource and service managed through it, and resources can also be tagged as part of an ARM deployment to support later cost reporting and organization.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/4-describe-azure-resource-manager-azure-arm-templates"},
+        {"text": "ARM templates support modularity and extensibility: large deployments can be broken into smaller, reusable nested templates, and a template can invoke PowerShell or Bash deployment scripts to run setup or teardown actions before or after the main resource deployment.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-features-tools-manage-deploy-azure-resources/4-describe-azure-resource-manager-azure-arm-templates"}
+      ]
+    },
+    {
+      "topic": "azure_advisor",
+      "bullet": "Describe the purpose of Azure Advisor",
+      "additional_concepts": [
+        {"text": "Azure Advisor scans a subscription's deployed resources and generates personalized, actionable recommendations, functioning like a built-in best-practices advisor embedded directly in the Azure portal.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-monitoring-tools-azure/2-describe-purpose-of-azure-advisor"},
+        {"text": "Advisor recommendations are grouped into five categories — Reliability, Security, Performance, Operational Excellence, and Cost — each addressing a different dimension of running a well-managed Azure environment.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-monitoring-tools-azure/2-describe-purpose-of-azure-advisor"},
+        {"text": "For each recommendation, Advisor offers a specific suggested action that a user can act on immediately, postpone for later, or dismiss outright if it doesn't apply to their situation.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-monitoring-tools-azure/2-describe-purpose-of-azure-advisor"},
+        {"text": "The Advisor dashboard can be filtered by subscription, resource group, or service, letting a user narrow the recommendation list down to the specific part of the environment they care about at a given moment.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-monitoring-tools-azure/2-describe-purpose-of-azure-advisor"},
+        {"text": "Advisor supports proactive notifications, allowing users to be alerted automatically whenever new recommendations become available rather than needing to check the dashboard manually.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-monitoring-tools-azure/2-describe-purpose-of-azure-advisor"}
+      ]
+    },
+    {
+      "topic": "azure_service_health",
+      "bullet": "Describe Azure Service Health",
+      "additional_concepts": [
+        {"text": "Azure Service Health is composed of three progressively narrower views: Azure Status, showing global health across all Azure services and regions; Service Health, personalized to the specific services and regions an account actually uses; and Resource Health, focused on one specific resource such as a single virtual machine.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-monitoring-tools-azure/3-describe-azure-service-health"},
+        {"text": "Azure Status is a useful first stop during a broadly reported outage, since it reflects Azure-wide health independent of any particular account's own resources.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-monitoring-tools-azure/3-describe-azure-service-health"},
+        {"text": "Because Service Health is scoped to a signed-in account, it can surface outages, planned maintenance, and health advisories that are actually relevant to that account's deployed services, and it supports configurable alerts so users are notified automatically.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-monitoring-tools-azure/3-describe-azure-service-health"},
+        {"text": "Resource Health indicates not just whether an individual resource is currently healthy, but also helps distinguish whether an observed problem originates on Azure's side or from the customer's own configuration.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-monitoring-tools-azure/3-describe-azure-service-health"},
+        {"text": "Service Health retains historical alert data, making it possible to identify recurring patterns across past incidents, and during an active incident it provides direct links to support to speed up the response.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-monitoring-tools-azure/3-describe-azure-service-health"}
+      ]
+    },
+    {
+      "topic": "azure_monitor",
+      "bullet": "Describe Azure Monitor, including Log Analytics, Azure Monitor alerts, and Azure Monitor Application Insights",
+      "additional_concepts": [
+        {"text": "Azure Monitor is a unified platform for collecting, analyzing, and acting on both metrics and log data gathered from applications, operating systems, and network layers, spanning Azure, on-premises, and multicloud environments.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-monitoring-tools-azure/4-describe-azure-monitor"},
+        {"text": "Log Analytics is the query engine within the Azure portal used to interrogate the data Azure Monitor collects, ranging from a simple filter such as listing recent errors to advanced analytical queries that reveal trends over time.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-monitoring-tools-azure/4-describe-azure-monitor"},
+        {"text": "An Azure Monitor alert rule pairs a defined condition with an action group, which specifies who gets notified and what automated response occurs when the condition is met; the same action groups can be reused across Azure Monitor, Service Health, and Azure Advisor.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-monitoring-tools-azure/4-describe-azure-monitor"},
+        {"text": "Alerts can be metric-based, such as notifying when a VM's CPU usage stays above a defined threshold, or log-based, such as detecting a specific error pattern appearing across multiple resources.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-monitoring-tools-azure/4-describe-azure-monitor"},
+        {"text": "Application Insights is the Azure Monitor feature focused on application-level telemetry; it can be added via an SDK in the application code or an agent requiring no code changes, and it tracks request/response rates, dependency call performance, page load times, user and session counts, server performance counters, and synthetic availability tests that simulate traffic during quiet periods.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-monitoring-tools-azure/4-describe-azure-monitor"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,163 @@
+{
+  "domain": "Azure Architecture & Services",
+  "bullets": [
+    {
+      "topic": "compare_azure_storage_services",
+      "bullet": "Compare Azure Storage services",
+      "additional_concepts": [
+        {"text": "Blob storage is optimized for unstructured object data like images, video, and log files, and can also power big data analytics through Data Lake Storage Gen2.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/4-describe-azure-storage-services"},
+        {"text": "Azure Files provides fully managed cloud file shares reachable over SMB or NFS, so both cloud and on-premises systems can mount them concurrently.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/4-describe-azure-storage-services"},
+        {"text": "Azure Queue storage holds large volumes of messages, each up to 64 KB, for asynchronous communication between application components, and is often used to trigger Azure Functions.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/4-describe-azure-storage-services"},
+        {"text": "Azure Disks provide managed, block-level storage volumes attached to Azure virtual machines, with Azure handling the underlying hardware.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/4-describe-azure-storage-services"},
+        {"text": "Azure Table storage is a NoSQL service for storing large volumes of structured, non-relational data that can be accessed from cloud or hybrid applications.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/4-describe-azure-storage-services"},
+        {"text": "All data written to Azure Storage is encrypted automatically and can be reached globally over HTTP or HTTPS via REST APIs, SDKs, the Azure CLI, Azure PowerShell, the Azure portal, or Storage Explorer.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/4-describe-azure-storage-services"}
+      ]
+    },
+    {
+      "topic": "describe_storage_tiers",
+      "bullet": "Describe storage tiers",
+      "additional_concepts": [
+        {"text": "The hot access tier is intended for data accessed frequently, such as images actively served on a live website.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/4-describe-azure-storage-services"},
+        {"text": "The cool tier suits data accessed infrequently and expected to be kept for at least 30 days, such as customer invoices.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/4-describe-azure-storage-services"},
+        {"text": "The cold tier is meant for infrequently accessed data with a recommended minimum storage duration of about 90 days.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/4-describe-azure-storage-services"},
+        {"text": "The archive tier is reserved for rarely accessed data kept at least 180 days, such as long-term backups, offering the lowest storage cost but the slowest and most expensive retrieval (rehydration).", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/4-describe-azure-storage-services"},
+        {"text": "Hot, cool, and cold tiers can be set as the default for a whole storage account, but the archive tier can only be applied to individual blobs, not to an entire account.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/4-describe-azure-storage-services"}
+      ]
+    },
+    {
+      "topic": "describe_redundancy_options",
+      "bullet": "Describe redundancy options",
+      "additional_concepts": [
+        {"text": "Regardless of which redundancy option is chosen, Azure Storage always writes data synchronously three times within the primary region.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/3-redundancy"},
+        {"text": "LRS is the lowest-cost redundancy option and protects against server rack and drive failures within a single datacenter, but it cannot protect against the loss of the entire datacenter.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/3-redundancy"},
+        {"text": "ZRS synchronously copies data across three separate availability zones in the primary region, so data stays readable and writable even if one zone becomes unavailable.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/3-redundancy"},
+        {"text": "Because replication to a secondary region happens asynchronously, geo-redundant options carry a recovery point objective (RPO) typically under 15 minutes, meaning very recent writes could be lost if the primary region fails before they replicate.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/3-redundancy"},
+        {"text": "GRS pairs local replication (LRS) in the primary region with asynchronous LRS replication to a paired secondary region, while GZRS pairs zone-redundant replication (ZRS) in the primary region with LRS replication to the secondary region.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/3-redundancy"},
+        {"text": "The secondary region's data copy is normally not readable unless a failover occurs; choosing RA-GRS or RA-GZRS instead allows read access to that secondary copy at any time.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/3-redundancy"}
+      ]
+    },
+    {
+      "topic": "storage_account_options_and_types",
+      "bullet": "Describe storage account options and storage types",
+      "additional_concepts": [
+        {"text": "Storage account names must be globally unique across all of Azure and can only contain 3 to 24 lowercase letters and numbers.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/2-accounts"},
+        {"text": "Standard general-purpose v2 accounts support blobs, Data Lake Storage, queues, tables, and Azure Files together, and are Microsoft's recommended default account type for most scenarios.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/2-accounts"},
+        {"text": "Premium block blob accounts are optimized for workloads with high transaction rates, smaller objects, or a need for consistently low storage latency.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/2-accounts"},
+        {"text": "Premium file share accounts are the account type needed if an Azure file share must support the NFS protocol in addition to SMB.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/2-accounts"},
+        {"text": "Premium page blob accounts store only page blobs and support just the LRS redundancy option, unlike other account types that offer multiple redundancy choices.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/2-accounts"}
+      ]
+    },
+    {
+      "topic": "moving_files_azcopy_storage_explorer_file_sync",
+      "bullet": "Identify options for moving files, including AzCopy, Azure Storage Explorer, and Azure File Sync",
+      "additional_concepts": [
+        {"text": "AzCopy is a command-line tool for uploading, downloading, and copying blobs or files between storage accounts, and it can even move data to or from other cloud providers.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/7-identify-azure-file-movement-options"},
+        {"text": "AzCopy synchronization is one-directional: you designate a source and a destination, and it copies files in that single direction rather than reconciling changes both ways.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/7-identify-azure-file-movement-options"},
+        {"text": "Azure Storage Explorer is a free, cross-platform graphical app, available on Windows, macOS, and Linux, for managing blobs and files, and it uses AzCopy internally to perform its transfers.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/7-identify-azure-file-movement-options"},
+        {"text": "Azure File Sync keeps an on-premises Windows Server file share bidirectionally synchronized with an Azure file share, effectively letting the server act as a local cache.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/7-identify-azure-file-movement-options"},
+        {"text": "Azure File Sync supports cloud tiering, which keeps frequently accessed files cached on the local server while less-used files remain in the cloud and are fetched on demand.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/7-identify-azure-file-movement-options"}
+      ]
+    },
+    {
+      "topic": "migration_options_azure_migrate_data_box",
+      "bullet": "Describe migration options, including Azure Migrate and Azure Data Box",
+      "additional_concepts": [
+        {"text": "Azure Migrate acts as a central hub offering tools for discovery, assessment, and migration of on-premises servers, databases, and web apps into Azure.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/6-identify-azure-data-migration-options"},
+        {"text": "Azure Migrate can incorporate third-party independent software vendor (ISV) tools alongside its own built-in assessment and migration tools.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/6-identify-azure-data-migration-options"},
+        {"text": "Azure Data Box is a ruggedized, physically shipped storage appliance with up to 80 terabytes of usable capacity, used to transfer large data sets when network bandwidth is limited.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/6-identify-azure-data-migration-options"},
+        {"text": "Once a Data Box import's data has been uploaded to Azure, or an export device reaches the Azure datacenter, its disks are wiped following the NIST 800-88r1 data-sanitization standard.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/6-identify-azure-data-migration-options"},
+        {"text": "Data Box is best suited for one-time bulk migrations, recurring large uploads that would be too slow over a network connection, or exporting large data sets out of Azure for recovery or regulatory needs.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-storage-services/6-identify-azure-data-migration-options"}
+      ]
+    },
+    {
+      "topic": "directory_services_entra_id_and_domain_services",
+      "bullet": "Describe directory services in Azure, including Microsoft Entra ID and Microsoft Entra Domain Services",
+      "additional_concepts": [
+        {"text": "Microsoft Entra ID is Microsoft's cloud-based identity and access management service, used to sign in to both Microsoft cloud applications and custom-built applications.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/2-directory-services"},
+        {"text": "Unlike on-premises Active Directory, Microsoft Entra ID is operated and kept globally available by Microsoft, while the organization still manages its own identity accounts.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/2-directory-services"},
+        {"text": "Microsoft Entra Connect synchronizes user identities between an on-premises Active Directory and Microsoft Entra ID, giving users a consistent sign-in experience, including SSO and self-service password reset, on-premises and in the cloud.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/2-directory-services"},
+        {"text": "Microsoft Entra Domain Services provides managed domain join, group policy, LDAP, and Kerberos/NTLM authentication in Azure without requiring an organization to deploy or patch its own domain controllers.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/2-directory-services"},
+        {"text": "Creating a Microsoft Entra Domain Services managed domain deploys two Windows Server domain controllers, called a replica set, into a chosen Azure region, with Microsoft handling their patching, backup, and encryption at rest.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/2-directory-services"},
+        {"text": "Synchronization between Microsoft Entra ID and Microsoft Entra Domain Services flows only one way; resources created directly inside the managed domain are not synced back up to Microsoft Entra ID.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/2-directory-services"}
+      ]
+    },
+    {
+      "topic": "authentication_methods_sso_mfa_passwordless",
+      "bullet": "Describe authentication methods in Azure, including single sign-on (SSO), multifactor authentication (MFA), and passwordless",
+      "additional_concepts": [
+        {"text": "Single sign-on lets a user authenticate once and gain access to multiple trusted applications without re-entering credentials, but its overall security is only as strong as that initial sign-in.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/3-authentication-methods"},
+        {"text": "Multifactor authentication factors fall into three categories: something the user knows, such as a password; something the user has, such as a code sent to a device; and something the user is, such as a biometric trait.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/3-authentication-methods"},
+        {"text": "Passwordless authentication replaces the password entirely with a registered device plus a PIN or biometric signal, and Microsoft Entra ID supports it through Windows Hello for Business, the Microsoft Authenticator app, and FIDO2 security keys.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/3-authentication-methods"},
+        {"text": "Windows Hello for Business ties sign-in credentials to a specific Windows PC and integrates with public key infrastructure and single sign-on, making it best suited for workers who have their own dedicated device.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/3-authentication-methods"},
+        {"text": "FIDO2 security keys are unphishable hardware devices, commonly USB but also available as Bluetooth or NFC, built on the WebAuthn standard, that let a user sign in without typing any username or password.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/3-authentication-methods"}
+      ]
+    },
+    {
+      "topic": "external_identities",
+      "bullet": "Describe external identities in Azure",
+      "additional_concepts": [
+        {"text": "An external identity belongs to a person, device, or service outside an organization's own tenant, such as a partner, supplier, or contractor.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/4-external-identities"},
+        {"text": "With B2B collaboration, external users sign in with their own existing credentials and are represented in the resource tenant's directory as guest users.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/4-external-identities"},
+        {"text": "B2B direct connect establishes a mutual two-way trust between two Microsoft Entra tenants and currently supports Microsoft Teams shared channels, without adding the external users to the resource tenant's directory.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/4-external-identities"},
+        {"text": "Microsoft Entra External ID for customers, formerly known as Azure AD B2C, lets organizations publish consumer-facing apps and manage sign-in for customers using their own social or personal accounts.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/4-external-identities"},
+        {"text": "Access reviews let an organization periodically ask guest users or designated reviewers to recertify continued need for access, so unnecessary guest permissions can be identified and removed over time.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/4-external-identities"}
+      ]
+    },
+    {
+      "topic": "conditional_access",
+      "bullet": "Describe Microsoft Entra Conditional Access",
+      "additional_concepts": [
+        {"text": "Conditional Access evaluates signals such as user identity, location, device, and target application at sign-in time, then enforces a decision such as allow, block, or require additional verification.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/5-conditional-access"},
+        {"text": "Conditional Access can require multifactor authentication selectively, for example only for administrators or only for sign-ins from outside trusted network locations, instead of prompting every user on every sign-in.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/5-conditional-access"},
+        {"text": "Policies can restrict access to only approved client applications, such as limiting which email apps are permitted to connect to a corporate mailbox.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/5-conditional-access"},
+        {"text": "Conditional Access can require that an application only be reached from devices meeting an organization's security and compliance standards, referred to as managed devices.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/5-conditional-access"},
+        {"text": "A common Conditional Access use case is blocking sign-in attempts entirely when they originate from unknown or high-risk locations.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/5-conditional-access"}
+      ]
+    },
+    {
+      "topic": "azure_rbac",
+      "bullet": "Describe Azure role-based access control (RBAC)",
+      "additional_concepts": [
+        {"text": "The principle of least privilege behind Azure RBAC means users should be granted only the minimum access their task requires, such as read-only access to a single blob rather than broader permissions.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/6-role-based-access-control"},
+        {"text": "Azure RBAC role assignments can be scoped to a management group, a subscription, a resource group, or an individual resource, with permissions flowing down from broader to narrower scopes.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/6-role-based-access-control"},
+        {"text": "Because Azure RBAC is hierarchical, a role such as Owner assigned at the management group level automatically applies to every subscription and resource beneath it.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/6-role-based-access-control"},
+        {"text": "Azure RBAC is enforced by Azure Resource Manager on requests made through the Azure portal, Cloud Shell, PowerShell, or the CLI, but it does not govern access inside an application's own data or logic.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/6-role-based-access-control"},
+        {"text": "Azure RBAC uses an additive allow model, so if separate role assignments grant read and write permissions on the same resource group, the user ends up holding both permissions.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/6-role-based-access-control"}
+      ]
+    },
+    {
+      "topic": "zero_trust",
+      "bullet": "Describe the concept of Zero Trust",
+      "additional_concepts": [
+        {"text": "Zero Trust assumes that a breach has already occurred and verifies every request as if it originated from an open, uncontrolled network, rather than trusting anything by default.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/7-describe-zero-trust-model"},
+        {"text": "The three guiding principles of Zero Trust are verify explicitly, use least-privilege access, and assume breach.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/7-describe-zero-trust-model"},
+        {"text": "The least-privilege-access principle under Zero Trust includes applying Just-In-Time and Just-Enough-Access (JIT/JEA) along with risk-based adaptive policies, rather than granting standing broad access.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/7-describe-zero-trust-model"},
+        {"text": "Traditional perimeter-based security automatically trusted any device inside the corporate network; Zero Trust instead grants access based on continuous authentication and risk signals regardless of network location.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/7-describe-zero-trust-model"},
+        {"text": "Under Zero Trust, the same user signing in from an unmanaged device could be allowed into low-risk apps, prompted for MFA before reaching sensitive systems, or blocked entirely, depending on the evaluated risk.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/7-describe-zero-trust-model"}
+      ]
+    },
+    {
+      "topic": "defense_in_depth",
+      "bullet": "Describe the purpose of the defense-in-depth model",
+      "additional_concepts": [
+        {"text": "Defense-in-depth arranges protections as a series of concentric layers around the data being protected, so that a breach of one layer still leaves further layers standing in the attacker's way.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/8-describe-defense-depth"},
+        {"text": "The physical security layer is the outermost layer of defense-in-depth and protects access to the buildings and hardware inside a datacenter.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/8-describe-defense-depth"},
+        {"text": "The perimeter layer relies on distributed denial-of-service (DDoS) protection and firewalls to filter and alert on large-scale, network-based attacks before they reach internal resources.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/8-describe-defense-depth"},
+        {"text": "The network layer's guidance is to deny access by default, limit communication between resources to only what is required, and restrict both inbound and outbound internet access.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/8-describe-defense-depth"},
+        {"text": "The compute layer focuses on securing virtual machines through endpoint protection and up-to-date patching, while the application layer focuses on building security into the development lifecycle and storing secrets in a service such as Azure Key Vault.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/8-describe-defense-depth"},
+        {"text": "The innermost data layer is protected through encryption both at rest and in transit, since attackers are ultimately after data stored in databases, virtual machine disks, or SaaS applications.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/8-describe-defense-depth"}
+      ]
+    },
+    {
+      "topic": "microsoft_defender_for_cloud",
+      "bullet": "Describe the purpose of Microsoft Defender for Cloud",
+      "additional_concepts": [
+        {"text": "Microsoft Defender for Cloud is a cloud security posture management and workload protection service that monitors Azure, on-premises, hybrid, and multicloud resources from a single place.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/9-describe-microsoft-defender-for-cloud"},
+        {"text": "Defender for Cloud's coverage extends to hybrid environments through Azure Arc, and it can also protect resources in other clouds such as AWS EC2 instances and Amazon EKS clusters.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/9-describe-microsoft-defender-for-cloud"},
+        {"text": "Defender for Cloud's assess capability continuously evaluates resources for vulnerabilities, and for servers it integrates with Microsoft Defender for Endpoint to surface vulnerability findings.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/9-describe-microsoft-defender-for-cloud"},
+        {"text": "Defender for Cloud's secure capability builds on Azure Policy to deliver prioritized recommendations aligned to the Microsoft cloud security benchmark, and rolls them up into an overall secure score.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/9-describe-microsoft-defender-for-cloud"},
+        {"text": "Defender for Cloud's defend capability generates security alerts describing affected resources and remediation steps, uses kill-chain analysis to correlate related alerts into a single attack timeline, and offers protections such as just-in-time VM access.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-azure-identity-access-security/9-describe-microsoft-defender-for-cloud"}
+      ]
+    }
+  ]
+}

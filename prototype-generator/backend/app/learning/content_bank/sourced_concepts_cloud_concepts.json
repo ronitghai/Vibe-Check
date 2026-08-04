@@ -1,0 +1,177 @@
+{
+  "domain": "Cloud Concepts",
+  "bullets": [
+    {
+      "topic": "define_cloud_computing",
+      "bullet": "Define cloud computing",
+      "additional_concepts": [
+        {"text": "Cloud computing delivers IT services such as compute, storage, databases, and networking over the internet instead of requiring an organization to run that hardware itself.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/3-what-cloud-compute"},
+        {"text": "Cloud platforms extend beyond traditional infrastructure services to newer workload types such as Internet of Things (IoT), machine learning, and artificial intelligence offerings.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/3-what-cloud-compute"},
+        {"text": "Because cloud resources aren't tied to physical hardware an organization owns, IT capacity can be expanded quickly without waiting on new datacenter construction.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/3-what-cloud-compute"},
+        {"text": "Cloud computing changes infrastructure planning from long procurement cycles into on-demand provisioning, letting teams test changes and recover from problems more quickly.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/3-what-cloud-compute"},
+        {"text": "Because cloud providers operate datacenters across many regions, applications can be positioned closer to end users for better performance and regional resilience without an organization building its own worldwide facilities.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/3-what-cloud-compute"}
+      ]
+    },
+    {
+      "topic": "shared_responsibility_model",
+      "bullet": "Describe the shared responsibility model",
+      "additional_concepts": [
+        {"text": "Under the shared responsibility model, the cloud provider always owns the physical datacenter, physical network, and physical host hardware, while the customer always keeps responsibility for its own data and the identities that access it.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/4-describe-shared-responsibility-model"},
+        {"text": "Responsibility for elements such as operating systems, network controls, applications, and infrastructure isn't fixed; it shifts depending on which cloud service model is in use.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/4-describe-shared-responsibility-model"},
+        {"text": "In a traditional on-premises datacenter a single organization owns every layer, from physical security to the data itself, whereas the cloud model divides those duties between the provider and the customer.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/4-describe-shared-responsibility-model"},
+        {"text": "IaaS places the largest share of operational responsibility on the customer, since the provider only covers physical security, power, and connectivity, while SaaS shifts most of that responsibility onto the provider instead.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/4-describe-shared-responsibility-model"},
+        {"text": "PaaS sits between IaaS and SaaS on the responsibility spectrum, splitting duties more evenly between the customer and the cloud provider.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/4-describe-shared-responsibility-model"},
+        {"text": "For a managed database service, the provider maintains the database engine itself, but the customer still remains accountable for the data it loads into that database, showing how responsibility can split even within one service.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/4-describe-shared-responsibility-model"}
+      ]
+    },
+    {
+      "topic": "cloud_deployment_models",
+      "bullet": "Define cloud models, including public, private, and hybrid",
+      "additional_concepts": [
+        {"text": "A private cloud dedicates infrastructure to a single organization and can be hosted either in that organization's own datacenter or in a separate facility managed on its behalf by a third party.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/5-define-cloud-models"},
+        {"text": "A public cloud is built, owned, and operated by a third-party provider, and its resources are available for purchase by any customer, which is the key distinction from a private cloud.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/5-define-cloud-models"},
+        {"text": "A hybrid cloud interconnects public and private environments, which lets an organization temporarily draw on public cloud capacity to handle a surge in demand on top of its private cloud.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/5-define-cloud-models"},
+        {"text": "Multicloud describes using two or more public cloud providers at once, whether to combine different providers' strengths or because an organization is mid-migration from one provider to another.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/5-define-cloud-models"},
+        {"text": "Azure Arc extends consistent management to resources across public cloud, on-premises private cloud, hybrid configurations, and multicloud environments from one set of tools.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/5-define-cloud-models"},
+        {"text": "Azure VMware Solution lets an organization already running VMware in a private cloud move those workloads into Azure while keeping its existing VMware tooling and skills.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/5-define-cloud-models"}
+      ]
+    },
+    {
+      "topic": "cloud_model_use_cases",
+      "bullet": "Identify appropriate use cases for each cloud model",
+      "additional_concepts": [
+        {"text": "Public cloud fits scenarios that need fast, low-commitment scaling, since applications can be provisioned and deprovisioned quickly and billed only for what is actually used.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/5-define-cloud-models"},
+        {"text": "Private cloud suits workloads with strict isolation, security, or compliance needs, because data isn't collocated with other tenants and the organization keeps full control over its resources.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/5-define-cloud-models"},
+        {"text": "Choosing private cloud means accepting the tradeoff of purchasing and maintaining dedicated hardware in exchange for that greater control over resources and security.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/5-define-cloud-models"},
+        {"text": "Hybrid cloud is appropriate when an organization needs to decide, service by service, which workloads stay on private infrastructure for security or compliance reasons and which can run in public cloud for flexibility.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/5-define-cloud-models"},
+        {"text": "A multicloud approach fits organizations that want to draw on differentiated features from multiple providers, or that are actively transitioning workloads between providers.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/5-define-cloud-models"}
+      ]
+    },
+    {
+      "topic": "consumption_based_model",
+      "bullet": "Describe the consumption-based model",
+      "additional_concepts": [
+        {"text": "Cloud spending is classified as operational expenditure (OpEx) because it is paid for as it's consumed, in contrast to capital expenditure (CapEx), which is the upfront purchase of physical infrastructure.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/6-describe-consumption-based-model"},
+        {"text": "The consumption-based model removes upfront hardware costs and avoids the risk of buying capacity that ultimately goes underutilized.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/6-describe-consumption-based-model"},
+        {"text": "In a traditional datacenter, capacity has to be estimated in advance: overestimating wastes money on idle infrastructure, while underestimating causes degraded performance until new hardware can be installed.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/6-describe-consumption-based-model"},
+        {"text": "In the cloud, resources are added as demand rises and removed as demand falls, so spending follows actual usage instead of a fixed capacity purchased ahead of time.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/6-describe-consumption-based-model"},
+        {"text": "Under the consumption model, the provider takes on responsibility for the underlying power, cooling, hardware, and networking, which frees the customer to focus on applications rather than infrastructure upkeep.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/6-describe-consumption-based-model"}
+      ]
+    },
+    {
+      "topic": "cloud_pricing_models",
+      "bullet": "Compare cloud pricing models",
+      "additional_concepts": [
+        {"text": "Pay-as-you-go pricing charges the standard on-demand rate for a resource with no upfront commitment, offering maximum flexibility at the highest per-unit cost among Azure's pricing models.", "source": "https://learn.microsoft.com/en-us/azure/cost-management-billing/reservations/save-compute-costs-reservations"},
+        {"text": "Azure Reservations let a customer commit to a one-year or three-year term on a resource in exchange for a billing discount of up to 72% off pay-as-you-go rates.", "source": "https://learn.microsoft.com/en-us/azure/cost-management-billing/reservations/save-compute-costs-reservations"},
+        {"text": "A reservation discount is a billing-only benefit: once purchased, it applies automatically to matching resource usage and does not change how the resource actually runs.", "source": "https://learn.microsoft.com/en-us/azure/cost-management-billing/reservations/save-compute-costs-reservations"},
+        {"text": "Azure Spot Virtual Machines let a customer bid on unused Azure compute capacity at a steep discount off standard pay-as-you-go pricing, but Azure can evict a Spot VM with roughly 30 seconds' notice whenever it needs that capacity back and offers no SLA for them.", "source": "https://learn.microsoft.com/en-us/azure/virtual-machines/spot-vms"},
+        {"text": "Because Spot VMs can be evicted at any time, they suit interruption-tolerant workloads like batch processing or dev/test environments, while reservations suit predictable, steady-state workloads and pay-as-you-go suits short-term or unpredictable ones.", "source": "https://learn.microsoft.com/en-us/azure/virtual-machines/spot-vms"}
+      ]
+    },
+    {
+      "topic": "serverless_computing",
+      "bullet": "Describe serverless",
+      "additional_concepts": [
+        {"text": "Serverless computing is a cloud execution model in which the provider automatically manages server infrastructure, so developers can focus on writing and deploying code rather than provisioning or maintaining servers.", "source": "https://azure.microsoft.com/en-us/resources/cloud-computing-dictionary/what-is-serverless-computing"},
+        {"text": "In a serverless model, code runs in response to triggering events and consumes compute resources only while it's actually executing, rather than running on infrastructure that stays provisioned around the clock.", "source": "https://azure.microsoft.com/en-us/resources/cloud-computing-dictionary/what-is-serverless-computing"},
+        {"text": "Serverless billing follows a pay-per-execution structure: customers are charged for actual executions and the compute time consumed, not for pre-allocated server capacity that may sit idle.", "source": "https://azure.microsoft.com/en-us/resources/cloud-computing-dictionary/what-is-serverless-computing"},
+        {"text": "Serverless infrastructure scales automatically and rapidly to match workload demand, removing the need for a team to manually plan or provision capacity in advance.", "source": "https://azure.microsoft.com/en-us/resources/cloud-computing-dictionary/what-is-serverless-computing"},
+        {"text": "Because the provider handles operational tasks like scaling and server maintenance, serverless computing lets development teams build and ship applications faster with less infrastructure overhead.", "source": "https://azure.microsoft.com/en-us/resources/cloud-computing-dictionary/what-is-serverless-computing"}
+      ]
+    },
+    {
+      "topic": "high_availability_scalability",
+      "bullet": "Describe the benefits of high availability and scalability in the cloud",
+      "additional_concepts": [
+        {"text": "High availability aims to keep resources accessible despite disruptions, and Azure backs this with uptime guarantees defined in service-level agreements (SLAs) that vary by service.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/2-high-availability-scalability-cloud"},
+        {"text": "Scalability is the ability to adjust the amount of allocated resources to match current demand, whether that demand is rising or falling.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/2-high-availability-scalability-cloud"},
+        {"text": "Because cloud billing is consumption-based, scaling resources down when demand drops directly lowers cost instead of leaving an organization paying for capacity it no longer needs.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/2-high-availability-scalability-cloud"},
+        {"text": "Vertical scaling changes the capability of an existing resource, such as adding more CPU or RAM to a single virtual machine, or reducing it if the resource was over-specified.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/2-high-availability-scalability-cloud"},
+        {"text": "Horizontal scaling changes the number of resource instances, such as adding virtual machines or containers during a demand spike (scaling out) and removing them once demand subsides (scaling in).", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/2-high-availability-scalability-cloud"},
+        {"text": "Horizontal scaling can happen automatically in response to demand signals, or it can be triggered manually by an administrator.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/2-high-availability-scalability-cloud"}
+      ]
+    },
+    {
+      "topic": "reliability_predictability",
+      "bullet": "Describe the benefits of reliability and predictability in the cloud",
+      "additional_concepts": [
+        {"text": "Reliability is the ability of a system to recover from failures and keep functioning, and it is called out as one of the pillars of the Microsoft Azure Well-Architected Framework.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/3-reliability-predictability-cloud"},
+        {"text": "Cloud reliability stems from a decentralized design: because resources can be deployed across multiple regions worldwide, a catastrophic event in one region doesn't necessarily bring an application down.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/3-reliability-predictability-cloud"},
+        {"text": "Some Azure environments can automatically shift operation to a different region on the customer's behalf, without requiring any manual action when a regional event occurs.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/3-reliability-predictability-cloud"},
+        {"text": "Performance predictability relies on features such as autoscaling and load balancing, which add capacity or redistribute traffic automatically so users get a consistent experience even as demand shifts.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/3-reliability-predictability-cloud"},
+        {"text": "Cost predictability comes from being able to track resource usage in real time and apply analytics to spot spending patterns, with tools like the Azure Pricing Calculator helping forecast future cloud spend.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/3-reliability-predictability-cloud"}
+      ]
+    },
+    {
+      "topic": "security_governance_benefits",
+      "bullet": "Describe the benefits of security and governance in the cloud",
+      "additional_concepts": [
+        {"text": "Deployment templates help ensure resources are configured to meet an organization's technical standards and regulatory requirements, and they can be updated at scale as those standards evolve.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/4-security-governance-cloud"},
+        {"text": "Cloud-based auditing tools can flag resources that have drifted out of compliance with an organization's defined baseline and suggest ways to bring them back into line.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/4-security-governance-cloud"},
+        {"text": "Depending on the chosen operating model, software patches and updates can be applied automatically, which eases both the security and governance workload.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/4-security-governance-cloud"},
+        {"text": "Choosing IaaS gives an organization maximum control over security because it manages its own operating systems and software, including patching, while PaaS and SaaS shift more of that patching responsibility to the provider.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/4-security-governance-cloud"},
+        {"text": "Cloud providers are generally well equipped to defend against large-scale threats such as distributed denial-of-service (DDoS) attacks, which strengthens the security posture of hosted workloads.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/4-security-governance-cloud"},
+        {"text": "Establishing strong governance practices early helps keep a cloud footprint updated, secure, and well managed as it grows over time.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/4-security-governance-cloud"}
+      ]
+    },
+    {
+      "topic": "manageability_benefits",
+      "bullet": "Describe the benefits of manageability in the cloud",
+      "additional_concepts": [
+        {"text": "\"Management of the cloud\" refers to managing the resources running in the cloud, such as automatically scaling a deployment up or down to match demand.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/5-manageability-cloud"},
+        {"text": "Preconfigured deployment templates let resources be provisioned in a consistent, repeatable way, removing the need for manual, one-off configuration each time.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/5-manageability-cloud"},
+        {"text": "The cloud can monitor the health of running resources and automatically replace ones that are failing, reducing the need for manual intervention during an outage.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/5-manageability-cloud"},
+        {"text": "Automatic alerts based on configured metrics keep administrators aware of performance and health issues in real time as they occur.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/5-manageability-cloud"},
+        {"text": "\"Management in the cloud\" refers to the different tools used to control the environment itself, including a web portal, a command-line interface, APIs, and PowerShell.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/5-manageability-cloud"},
+        {"text": "Combining these management tools lets an operations team deploy from templates, monitor health through the portal, and automate repetitive tasks with CLI or PowerShell scripts, cutting down on manual effort and configuration drift.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-benefits-use-cloud-services/5-manageability-cloud"}
+      ]
+    },
+    {
+      "topic": "iaas_overview",
+      "bullet": "Describe infrastructure as a service (IaaS)",
+      "additional_concepts": [
+        {"text": "IaaS is described as the most flexible cloud service category, giving the customer the greatest amount of control over the resources it deploys.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/2-describe-infrastructure-service"},
+        {"text": "In an IaaS model, the provider is responsible only for the physical hardware, internet connectivity, and physical security, leaving the customer to install, configure, and maintain the operating system.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/2-describe-infrastructure-service"},
+        {"text": "With IaaS, the customer is also responsible for network configuration as well as database and storage configuration on top of the rented hardware.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/2-describe-infrastructure-service"},
+        {"text": "IaaS is essentially renting hardware in a cloud datacenter, while the customer decides what to run on that hardware and how to configure it.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/2-describe-infrastructure-service"},
+        {"text": "Lift-and-shift migration is a common IaaS scenario, where an organization recreates its on-premises setup in the cloud and moves existing workloads over with minimal redesign.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/2-describe-infrastructure-service"},
+        {"text": "IaaS also suits testing and development scenarios, because environments with established configurations can be started up or shut down rapidly while the customer retains full control over them.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/2-describe-infrastructure-service"}
+      ]
+    },
+    {
+      "topic": "paas_overview",
+      "bullet": "Describe platform as a service (PaaS)",
+      "additional_concepts": [
+        {"text": "PaaS sits as a middle ground between renting raw infrastructure (IaaS) and consuming a fully built application (SaaS).", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/3-describe-platform-service"},
+        {"text": "In PaaS, the provider maintains not just the physical infrastructure but also the operating systems, middleware, development tools, and analytics services that make up the platform.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/3-describe-platform-service"},
+        {"text": "Using PaaS means the customer doesn't have to manage licensing or patching for the underlying operating systems or databases.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/3-describe-platform-service"},
+        {"text": "PaaS is well suited to giving developers a ready-made development environment, letting them focus on building applications rather than maintaining the infrastructure underneath.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/3-describe-platform-service"},
+        {"text": "A common PaaS scenario is building analytics or business intelligence solutions, using the platform's built-in tools to mine data, find patterns, and forecast outcomes without managing the underlying platform.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/3-describe-platform-service"}
+      ]
+    },
+    {
+      "topic": "saas_overview",
+      "bullet": "Describe software as a service (SaaS)",
+      "additional_concepts": [
+        {"text": "SaaS is described as the most complete cloud service model, delivering a fully developed application that customers essentially rent or use directly.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/4-describe-software-service"},
+        {"text": "Common examples of SaaS include email, financial software, messaging applications, and connectivity software.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/4-describe-software-service"},
+        {"text": "SaaS is the least flexible of the three service models but also the quickest to get running, requiring the least technical expertise to use.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/4-describe-software-service"},
+        {"text": "With SaaS, the customer's responsibility narrows mainly to its data, identity and access settings, and the security posture of devices connecting to the service, while the provider manages the rest of the stack.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/4-describe-software-service"},
+        {"text": "Because the provider manages infrastructure, platform, and application maintenance in SaaS, it carries the lowest operational overhead of the three service models for the customer.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/4-describe-software-service"}
+      ]
+    },
+    {
+      "topic": "service_type_use_cases",
+      "bullet": "Identify appropriate use cases for each cloud service type (IaaS, PaaS, and SaaS)",
+      "additional_concepts": [
+        {"text": "IaaS is a strong fit for lift-and-shift migrations, where an organization wants to recreate its existing on-premises setup in the cloud with minimal redesign.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/2-describe-infrastructure-service"},
+        {"text": "IaaS also works well for test and development environments that need to be created and discarded rapidly while the team keeps full configuration control.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/2-describe-infrastructure-service"},
+        {"text": "PaaS is well suited to teams that want a development framework with built-in scalability, high availability, and multitenant support, so they write less infrastructure-level code themselves.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/3-describe-platform-service"},
+        {"text": "PaaS also serves analytics and business intelligence scenarios, offering built-in tools for mining data and forecasting outcomes without managing the underlying platform.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/3-describe-platform-service"},
+        {"text": "SaaS is the natural choice for ready-to-use business functions such as email, messaging, and finance or expense tracking, where the organization wants working software without managing any of the underlying stack.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/4-describe-software-service"},
+        {"text": "Across the three models, the right choice generally depends on how much infrastructure control an organization wants versus how much operational responsibility it's willing to hand to the provider: IaaS maximizes control, SaaS minimizes operational burden, and PaaS balances the two for application development.", "source": "https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/2-describe-infrastructure-service"}
+      ]
+    }
+  ]
+}

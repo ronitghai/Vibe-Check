@@ -47,7 +47,7 @@ import Az900GameWindow from "./components/Az900GameWindow";
 import Az900Diagnostic from "./components/Az900Diagnostic";
 import Az900Summary from "./components/Az900Summary";
 import { fetchDashboard, reportPracticeResult } from "./api/client";
-import { getSessionId } from "./session";
+import { getSessionId, resetSession } from "./session";
 import type { PlayingGame } from "./types";
 import type { AssessmentSubmitResponse, GameResult } from "./api/client";
 import "./App.css";
@@ -134,6 +134,17 @@ export default function App() {
     setAz900Version((v) => v + 1);
   }
 
+  /** Wired to Az900WeakAreas' "Reset Progress" button (already confirm-gated
+   * there before this ever runs). Swapping in a brand-new session_id — see
+   * session.ts's resetSession — is the entire reset; reloading is the
+   * simplest reliable way to re-initialize every piece of state in this
+   * component tree against that new id rather than manually resetting each
+   * of the dozen useState calls above one by one. */
+  function handleResetProgress() {
+    resetSession();
+    window.location.reload();
+  }
+
   function renderMain() {
     if (view === "az900-game-window") {
       return (
@@ -141,6 +152,7 @@ export default function App() {
           sessionId={sessionId}
           refreshKey={az900Version}
           onRetakeDiagnostic={() => setView("az900-diagnostic")}
+          onResetProgress={handleResetProgress}
           onPlay={(game, gameId, domain) => handlePlay(game, gameId, domain)}
         />
       );

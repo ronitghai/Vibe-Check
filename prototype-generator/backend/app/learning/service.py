@@ -34,10 +34,12 @@ from ..games import registry
 from . import store
 from .knowledge_base import (
     DOMAINS,
+    DOMAIN_WEIGHTS,
     FALLBACK_CROSSWORD,
     FALLBACK_MATCHING,
     QUESTION_BANK,
     SNIPPETS,
+    TOPICS_BY_DOMAIN,
     get_snippet_for_topic,
 )
 
@@ -134,12 +136,77 @@ Requirements:
 # Diagnostic assessment
 # ===========================================================================
 
+def _weighted_question_counts(total: int) -> dict[str, int]:
+    """
+    Split `total` questions across DOMAINS proportional to DOMAIN_WEIGHTS
+    (the real 25-30/35-40/30-35 AZ-900 exam weighting), using the largest-
+    remainder method so the counts always sum to exactly `total` — e.g. for
+    ASSESSMENT_SIZE=10 this comes out to Cloud Concepts=3, Azure
+    Architecture & Services=4, Azure Management & Governance=3.
+    """
+    weight_sum = sum(DOMAIN_WEIGHTS[d] for d in DOMAINS)
+    raw = {d: total * DOMAIN_WEIGHTS[d] / weight_sum for d in DOMAINS}
+    counts = {d: int(raw[d]) for d in DOMAINS}  # floor
+    remaining = total - sum(counts.values())
+    # Give the leftover questions to whichever domains had the largest
+    # fractional remainder, so the total always lands exactly on `total`.
+    by_remainder = sorted(DOMAINS, key=lambda d: raw[d] - counts[d], reverse=True)
+    for d in by_remainder[:remaining]:
+        counts[d] += 1
+    return counts
+
+
+def _topics_uncovered_first(session_id: str, domain: str) -> list[str]:
+    """
+    Every topic in `domain` (from knowledge_base.TOPICS_BY_DOMAIN), with
+    topics this session hasn't been quizzed on yet shuffled to the front.
+    Shared by the diagnostic (_pick_questions_for_domain) and practice
+    content generation (_pick_target_topics) — both need the same "haven't
+    seen this yet beats already-covered" priority so that using either path
+    actually advances the learner toward full coverage instead of
+    re-covering the same handful of topics forever.
+    """
+    covered = store.get_covered_topics(session_id, domain)
+    all_topics = list(TOPICS_BY_DOMAIN[domain])
+    uncovered = [t for t in all_topics if t not in covered]
+    seen = [t for t in all_topics if t in covered]
+    random.shuffle(uncovered)
+    random.shuffle(seen)
+    return uncovered + seen
+
+
+def _pick_questions_for_domain(session_id: str, domain: str, count: int) -> list[dict]:
+    """
+    Pick `count` questions from QUESTION_BANK[domain] for one diagnostic,
+    prioritizing DISTINCT topics the session hasn't been quizzed on yet —
+    not just random questions, which could easily pick 2 questions from the
+    same already-covered topic while ignoring an untouched one (each topic
+    has ~7 questions, so pure random sampling wastes a lot of a diagnostic's
+    limited question budget). This is what makes "retake the diagnostic"
+    an effective way to raise topic coverage (see get_progress_summary),
+    not just a way to re-roll the same handful of topics.
+
+    Within a chosen topic, the specific question is picked at random from
+    that topic's pool (~7 questions), so repeats stay varied even after
+    every topic is covered.
+    """
+    by_topic: dict[str, list[dict]] = {}
+    for q in QUESTION_BANK[domain]:
+        by_topic.setdefault(q["topic"], []).append(q)
+
+    topic_order = [t for t in _topics_uncovered_first(session_id, domain) if t in by_topic]
+    return [random.choice(by_topic[topic]) for topic in topic_order[:count]]
+
+
 def start_assessment(session_id: str) -> dict:
     """
     Build one diagnostic assessment: sample ASSESSMENT_SIZE questions from
-    QUESTION_BANK, spread as evenly as possible across the 3 domains (so a
-    10-question assessment is roughly 3-3-4, never e.g. all 10 from one
-    domain), shuffle the overall order, and stash the answer key server-side.
+    QUESTION_BANK, spread across the 3 domains proportional to their REAL
+    AZ-900 exam weight (see DOMAIN_WEIGHTS in knowledge_base.py — 25-30% /
+    35-40% / 30-35%, not a flat 1/3 each) and, within each domain,
+    prioritizing topics this session hasn't covered yet (see
+    _pick_questions_for_domain) — shuffle the overall order, and stash the
+    answer key server-side.
 
     Returns {assessment_id, questions} where `questions` has NO answerIndex
     in it — only save_pending_assessment()'s copy (server-side) has that.
@@ -147,14 +214,8 @@ def start_assessment(session_id: str) -> dict:
     """
     picked: list[dict] = []
 
-    per_domain = ASSESSMENT_SIZE // len(DOMAINS)
-    remainder = ASSESSMENT_SIZE - per_domain * len(DOMAINS)
-
-    for i, domain in enumerate(DOMAINS):
-        count = per_domain + (1 if i < remainder else 0)
-        pool = QUESTION_BANK[domain][:]  # copy — shuffle() mutates in place
-        random.shuffle(pool)
-        for q in pool[:count]:
+    for domain, count in _weighted_question_counts(ASSESSMENT_SIZE).items():
+        for q in _pick_questions_for_domain(session_id, domain, count):
             picked.append({"domain": domain, **q})
 
     random.shuffle(picked)  # interleave domains instead of 4 Cloud Q's in a row, etc.
@@ -193,6 +254,7 @@ def submit_assessment(session_id: str, assessment_id: str, answers: list[dict]) 
 
     per_domain_correct: dict[str, int] = {d: 0 for d in DOMAINS}
     per_domain_total: dict[str, int] = {d: 0 for d in DOMAINS}
+    per_domain_topics: dict[str, list[str]] = {d: [] for d in DOMAINS}
     results = []
     explanations = []
 
@@ -202,6 +264,7 @@ def submit_assessment(session_id: str, assessment_id: str, answers: list[dict]) 
         is_correct = chosen == q["answerIndex"]
 
         per_domain_total[domain] += 1
+        per_domain_topics[domain].append(q["topic"])
         if is_correct:
             per_domain_correct[domain] += 1
         else:
@@ -211,7 +274,11 @@ def submit_assessment(session_id: str, assessment_id: str, answers: list[dict]) 
                     "yourAnswer": q["choices"][chosen] if chosen is not None else None,
                     "correctAnswer": q["choices"][q["answerIndex"]],
                     "domain": domain,
-                    "explanation": get_snippet_for_topic(domain, q["topic"]) or "",
+                    # Every question in the current bank carries its own
+                    # explanation now (specific to what was actually asked);
+                    # fall back to the older topic-level snippet lookup only
+                    # for a question that doesn't have one.
+                    "explanation": q.get("explanation") or get_snippet_for_topic(domain, q["topic"]) or "",
                 }
             )
 
@@ -220,6 +287,10 @@ def submit_assessment(session_id: str, assessment_id: str, answers: list[dict]) 
     for domain in DOMAINS:
         if per_domain_total[domain] > 0:
             store.record_result(session_id, domain, per_domain_correct[domain], per_domain_total[domain])
+            # Coverage is exposure-based, not correctness-based — every
+            # topic actually asked this round counts as "covered" whether
+            # the learner got it right or wrong.
+            store.mark_topics_covered(session_id, domain, per_domain_topics[domain])
 
     total_correct = sum(per_domain_correct.values())
     total_questions = sum(per_domain_total.values())
@@ -246,24 +317,56 @@ def get_progress_summary(session_id: str) -> dict:
     used by the Game Menu/weak-areas screen and by submit_assessment() and
     record_practice_result() to return fresh numbers after a write.
 
-    overallProgress is simply the average masteryPct across the 3 domains.
-    domain_mastery's correct/total already blends diagnostic answers AND
-    real practice-game answers (both go through store.record_result) into
-    one accuracy figure per domain, so a plain average is an honest "how
-    well is this learner actually doing" number — no separate "did they
-    bother to practice" weighting on top of it. The progress bar moves
-    because the learner is answering things correctly, full stop.
+    Each domain's masteryPct is GATED by concept coverage, not raw accuracy
+    alone:
+
+        masteryPct = round(accuracy_pct * coverage_fraction)
+
+    where accuracy_pct is correct/total from domain_mastery (can go up OR
+    down as the learner answers more things — see record_practice_result;
+    this is what makes it possible to LOSE progress, not just gain it) and
+    coverage_fraction is (topics quizzed at least once) / (topics that
+    exist in that domain — see knowledge_base.TOPICS_BY_DOMAIN). Coverage
+    only ever grows (store.mark_topics_covered never un-marks a topic), so
+    a domain's mastery CEILING rises monotonically as more of the knowledge
+    base gets covered, but the actual number under that ceiling still moves
+    with real performance. A domain can only ever show 100% once every one
+    of its topics has been quizzed AND every answer given was correct —
+    100% accuracy on 3 of 16 topics caps out far below 100%.
+
+    overallProgress is that gated masteryPct averaged across the 3 domains,
+    weighted by DOMAIN_WEIGHTS (the real 25-30/35-40/30-35 AZ-900 exam
+    weighting, not a flat 1/3 each).
 
     Returns per-domain rows (domain, correct, total, masteryPct,
-    practiceCount), the weakest domain, and overallProgress.
+    practiceCount, topicsCovered, topicsTotal), the weakest domain, and
+    overallProgress.
     """
     mastery = store.get_mastery(session_id)
     practice_counts = store.get_practice_counts(session_id)
 
-    domains = [{**m, "practiceCount": practice_counts.get(m["domain"], 0)} for m in mastery]
+    domains = []
+    for m in mastery:
+        domain = m["domain"]
+        topics_total = len(TOPICS_BY_DOMAIN[domain])
+        topics_covered = len(store.get_covered_topics(session_id, domain))
+        coverage_fraction = (topics_covered / topics_total) if topics_total else 0
+        gated_pct = round(m["masteryPct"] * coverage_fraction)
+        domains.append({
+            **m,
+            "masteryPct": gated_pct,
+            "practiceCount": practice_counts.get(domain, 0),
+            "topicsCovered": topics_covered,
+            "topicsTotal": topics_total,
+        })
 
-    avg_mastery_pct = sum(d["masteryPct"] for d in domains) / len(domains)
-    weakest_domain = store.get_weakest_domain(session_id)
+    weight_sum = sum(DOMAIN_WEIGHTS[d["domain"]] for d in domains)
+    avg_mastery_pct = sum(d["masteryPct"] * DOMAIN_WEIGHTS[d["domain"]] for d in domains) / weight_sum
+    # Weakest domain is picked from the GATED numbers (not raw accuracy), so
+    # a domain that's "100% right on the 2 questions I've seen" but barely
+    # covered still reads as needing attention — same untouched-first
+    # tie-break store.get_weakest_domain uses, just applied post-gating.
+    weakest_domain = min(domains, key=lambda d: (d["total"] > 0, d["masteryPct"]))["domain"]
 
     return {
         "domains": domains,
@@ -326,9 +429,18 @@ def record_practice_result(session_id: str, game_id: str, domain: str, correct: 
     """
     Called when a practice game reports its real result (see PlayView.tsx's
     postMessage listener, which calls POST /api/az900/practice/result).
-    Writes the score into BOTH:
+    Writes the score into:
       - domain_mastery (store.record_result) — the same accumulator the
-        diagnostic uses, so this is what actually moves the progress bar.
+        diagnostic uses, driving the ACCURACY half of masteryPct.
+      - topic_coverage (store.mark_topics_covered) — whichever topics
+        generate_practice_content targeted for this specific game (stashed
+        in the launched game's own payload at generation time, see
+        _pick_target_topics), driving the COVERAGE half. A game not
+        launched through generate_practice_content (e.g. one the chat
+        generator improvised) simply has no target topics to mark — its
+        score still counts toward accuracy, just not toward coverage, since
+        there's no reliable way to know which specific topics a freeform
+        chat-generated game actually touched.
       - practice_log (store.log_attempt) — a pure attempt-history record for
         display ("you've practiced this domain N times").
     Returns the freshly recomputed progress summary.
@@ -348,6 +460,12 @@ def record_practice_result(session_id: str, game_id: str, domain: str, correct: 
     weighted_total = round(total * weight * 100)
     store.record_result(session_id, domain, weighted_correct, weighted_total)
     store.log_attempt(session_id, game_id, domain, correct, total)
+
+    launched = session_store.get_game(session_id, game_id)
+    target_topics = (launched or {}).get("az900_topics") or []
+    if target_topics:
+        store.mark_topics_covered(session_id, domain, target_topics)
+
     return get_progress_summary(session_id)
 
 
@@ -359,6 +477,22 @@ def record_practice_result(session_id: str, game_id: str, domain: str, correct: 
 # ever shipping something broken or hallucinated.
 # ===========================================================================
 
+# How many distinct topics one practice round's content gets grounded in.
+# Tighter than "every snippet in the domain" (which could be 40+ topics) —
+# keeps the LLM's grounding focused and, more importantly, means each round
+# has a concrete, storable list of topics to credit toward coverage when the
+# real score comes back (see _pick_target_topics / record_practice_result).
+TOPICS_PER_PRACTICE_ROUND = 8
+
+
+def _pick_target_topics(session_id: str, domain: str, count: int = TOPICS_PER_PRACTICE_ROUND) -> list[str]:
+    """Which topics THIS round of practice content should be grounded in and
+    later get coverage credit for — uncovered topics first (see
+    _topics_uncovered_first), so playing practice rounds is a real way to
+    reach full coverage, not just a way to grind accuracy on a few topics."""
+    return _topics_uncovered_first(session_id, domain)[:count]
+
+
 def generate_practice_content(session_id: str, game_id: str, domain: str | None = None) -> dict:
     """
     Generate AZ-900-grounded content for `game_id` (a curated learning-activity
@@ -367,21 +501,32 @@ def generate_practice_content(session_id: str, game_id: str, domain: str | None 
     same session_store.upsert_game() call every other launch path in the
     app uses, so this is a completely normal library game afterward.
 
+    Content is grounded in a specific BATCH of that domain's topics (see
+    _pick_target_topics), not the whole domain's snippet list — those exact
+    topics are stashed in the launched game's own payload as "az900_topics"
+    so that when the real score comes back, record_practice_result knows
+    precisely which topics to mark covered.
+
     Raises ValueError for a game_id that isn't a real template game.
     """
     if game_id not in registry.GAMES:
         raise ValueError(f"Unknown game_id: {game_id}")
 
     target_domain = domain if domain in DOMAINS else store.get_weakest_domain(session_id)
-    snippets = SNIPPETS[target_domain]
-    facts_text = "\n".join(f"- {s['snippet']}" for s in snippets)
+    target_topics = _pick_target_topics(session_id, target_domain)
+    relevant_snippets = [s for s in SNIPPETS[target_domain] if s["topic"] in target_topics]
+    # Extremely unlikely (would need every topic's snippets to somehow be
+    # empty), but fall back to the full domain rather than ground on nothing.
+    facts_text = "\n".join(f"- {s['snippet']}" for s in (relevant_snippets or SNIPPETS[target_domain]))
     mastery_pct = _get_domain_mastery_pct(session_id, target_domain)
 
     overrides = _build_config_overrides(game_id, target_domain, facts_text, mastery_pct)
     config = registry.merge_config(game_id, overrides)
     title = f"{registry.GAMES[game_id]['title']} — {target_domain}"
 
-    session_store.upsert_game(session_id, game_id, "template", title, {"config": config})
+    session_store.upsert_game(
+        session_id, game_id, "template", title, {"config": config, "az900_topics": target_topics}
+    )
 
     return {"game_id": game_id, "game_type": "template", "domain": target_domain}
 

@@ -69,12 +69,17 @@ class MissedExplanation(BaseModel):
 
 class DomainMastery(BaseModel):
     """One row of the progress table — used both in an assessment's result
-    payload and in the dashboard/game-menu response below."""
+    payload and in the dashboard/game-menu response below. masteryPct is
+    GATED by concept coverage (see service.get_progress_summary) — it can't
+    reach 100 until topicsCovered == topicsTotal for this domain, no matter
+    how high the underlying accuracy is."""
     domain: str
     correct: int
     total: int
     masteryPct: int
     practiceCount: int = 0  # how many practice games have been PLAYED (and scored) for this domain
+    topicsCovered: int = 0  # distinct topics quizzed at least once (diagnostic or practice)
+    topicsTotal: int = 0  # total topics that exist for this domain (knowledge_base.TOPICS_BY_DOMAIN)
 
 
 class AssessmentScore(BaseModel):

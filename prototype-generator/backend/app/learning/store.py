@@ -7,13 +7,14 @@ service.py's job. This file is *only* "save this" / "read that back".
 
 It reuses the exact same connection helper (`_conn()`) and the exact same
 SQLite database file as the rest of the app (see session_store.py) — we're
-just adding three more tables to it, not standing up a second database.
+just adding four more tables to it, not standing up a second database.
 
-THE THREE TABLES:
+THE FOUR TABLES:
   1. domain_mastery      — running correct/total answer counts, per session,
-                            per AZ-900 domain. This is "how good is this
-                            learner at each domain" and is the main input to
-                            the progress bar and the weak-areas sidebar.
+                            per AZ-900 domain. This is "how ACCURATE is this
+                            learner on what they've actually been asked" —
+                            one input to the progress bar, gated by #4 below
+                            (see service.get_progress_summary).
   2. pending_assessments — the server-side answer key for a diagnostic that
                             has been started but not yet submitted. The
                             client only ever sees questions + choices, never
@@ -32,6 +33,18 @@ THE THREE TABLES:
                             itself is really just an attempt history for
                             display ("you've practiced Quiz Flyer 3 times") —
                             it doesn't independently drive the progress bar.
+  4. topic_coverage      — which of knowledge_base.TOPICS_BY_DOMAIN's 62
+                            topics this session has actually been quizzed on
+                            at least once, diagnostic or practice. Existence
+                            of a row = covered; no correct/total here, that's
+                            what domain_mastery is for. This is the OTHER
+                            input to the progress bar: a domain's masteryPct
+                            can't reach 100% just from answering a handful of
+                            questions perfectly — see get_progress_summary's
+                            accuracy * coverage_fraction formula. A row is
+                            never deleted (coverage only ever grows), which
+                            is deliberate: you can't "un-see" a concept, even
+                            though accuracy on it can still go up or down.
 """
 
 import datetime
@@ -80,6 +93,17 @@ def init_db() -> None:
             correct INTEGER NOT NULL,
             total INTEGER NOT NULL,
             completed_at TEXT NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS topic_coverage (
+            session_id TEXT NOT NULL,
+            domain TEXT NOT NULL,
+            topic TEXT NOT NULL,
+            first_seen_at TEXT NOT NULL,
+            PRIMARY KEY (session_id, domain, topic)
         )
         """
     )
@@ -264,3 +288,40 @@ def get_recent_attempts(session_id: str, limit: int = 5) -> list[dict]:
     ).fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+
+# ---------------------------------------------------------------------------
+# topic_coverage — which topics this session has actually been quizzed on
+# ---------------------------------------------------------------------------
+
+def mark_topics_covered(session_id: str, domain: str, topics: list[str]) -> None:
+    """
+    Record that this session has now been quizzed on each topic in `topics`
+    (diagnostic questions answered, or a practice round's target topics —
+    see service.submit_assessment / service.record_practice_result). Safe to
+    call repeatedly with the same topic; `INSERT OR IGNORE` means the second
+    and later calls are no-ops (first_seen_at never changes, coverage is a
+    one-way door).
+    """
+    if not topics:
+        return
+    conn = _conn()
+    now = datetime.datetime.utcnow().isoformat()
+    conn.executemany(
+        "INSERT OR IGNORE INTO topic_coverage (session_id, domain, topic, first_seen_at) "
+        "VALUES (?, ?, ?, ?)",
+        [(session_id, domain, topic, now) for topic in topics],
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_covered_topics(session_id: str, domain: str) -> set[str]:
+    """Every topic in `domain` this session has been quizzed on at least once."""
+    conn = _conn()
+    rows = conn.execute(
+        "SELECT topic FROM topic_coverage WHERE session_id = ? AND domain = ?",
+        (session_id, domain),
+    ).fetchall()
+    conn.close()
+    return {row["topic"] for row in rows}

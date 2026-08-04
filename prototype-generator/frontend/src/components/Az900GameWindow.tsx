@@ -34,10 +34,20 @@ interface Props {
    * force a fresh fetch of progress. */
   refreshKey: number;
   onRetakeDiagnostic: () => void;
+  /** Wipes this session's AZ-900 progress (see session.ts's resetSession)
+   * and sends the learner back to the gate — wired all the way up through
+   * App.tsx since resetting also has to blow away App's own view state. */
+  onResetProgress: () => void;
   onPlay: (game: PlayingGame, az900GameId: string, az900Domain: string) => void;
 }
 
-export default function Az900GameWindow({ sessionId, refreshKey, onRetakeDiagnostic, onPlay }: Props) {
+export default function Az900GameWindow({
+  sessionId,
+  refreshKey,
+  onRetakeDiagnostic,
+  onResetProgress,
+  onPlay,
+}: Props) {
   const [domains, setDomains] = useState<DomainMastery[]>([]);
   const [weakestDomain, setWeakestDomain] = useState("");
   const [overallProgress, setOverallProgress] = useState(0);
@@ -67,13 +77,21 @@ export default function Az900GameWindow({ sessionId, refreshKey, onRetakeDiagnos
     );
   }
 
+  const topicsCovered = domains.reduce((sum, d) => sum + d.topicsCovered, 0);
+  const topicsTotal = domains.reduce((sum, d) => sum + d.topicsTotal, 0);
+
   return (
     <div className="az900">
       <Az900ProgressBar value={overallProgress} label="Program Progress" />
+      {topicsTotal > 0 && (
+        <div className="az900-coverage-line">
+          {topicsCovered}/{topicsTotal} concepts covered — 100% requires covering every concept
+        </div>
+      )}
       {error && <div className="status-text error">{error}</div>}
       {recommendation && <Az900RecommendationCard sessionId={sessionId} recommendation={recommendation} onPlay={onPlay} />}
       <div className="az900-window">
-        <Az900WeakAreas domains={domains} onRetakeDiagnostic={onRetakeDiagnostic} />
+        <Az900WeakAreas domains={domains} onRetakeDiagnostic={onRetakeDiagnostic} onResetProgress={onResetProgress} />
         <Az900GameMenu
           sessionId={sessionId}
           refreshKey={refreshKey}
