@@ -33,18 +33,20 @@ THE FOUR TABLES:
                             itself is really just an attempt history for
                             display ("you've practiced Quiz Flyer 3 times") —
                             it doesn't independently drive the progress bar.
-  4. topic_coverage      — which of knowledge_base.TOPICS_BY_DOMAIN's 62
-                            topics this session has actually been quizzed on
-                            at least once, diagnostic or practice. Existence
-                            of a row = covered; no correct/total here, that's
-                            what domain_mastery is for. This is the OTHER
-                            input to the progress bar: a domain's masteryPct
-                            can't reach 100% just from answering a handful of
-                            questions perfectly — see get_progress_summary's
-                            accuracy * coverage_fraction formula. A row is
-                            never deleted (coverage only ever grows), which
-                            is deliberate: you can't "un-see" a concept, even
-                            though accuracy on it can still go up or down.
+  4. topic_progress       — per-topic MASTERY STREAK: how many times in a
+                            row this session has gotten a topic right,
+                            without an intervening miss. A topic only counts
+                            toward the progress bar once its streak reaches
+                            service.MASTERY_STREAK_THRESHOLD (you have to
+                            get it right more than once) — see
+                            get_progress_summary's masteryPct formula, which
+                            is now literally "how many of this domain's
+                            topics are mastered / how many topics exist".
+                            A miss resets that topic's streak to 0
+                            immediately, which is what makes it possible to
+                            LOSE progress on a topic you'd previously
+                            mastered, not just fail to gain more — see
+                            record_topic_answer.
 """
 
 import datetime
@@ -98,11 +100,14 @@ def init_db() -> None:
     )
     conn.execute(
         """
-        CREATE TABLE IF NOT EXISTS topic_coverage (
+        CREATE TABLE IF NOT EXISTS topic_progress (
             session_id TEXT NOT NULL,
             domain TEXT NOT NULL,
             topic TEXT NOT NULL,
-            first_seen_at TEXT NOT NULL,
+            correct_streak INTEGER NOT NULL DEFAULT 0,
+            total_attempts INTEGER NOT NULL DEFAULT 0,
+            total_correct INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL,
             PRIMARY KEY (session_id, domain, topic)
         )
         """
@@ -291,37 +296,77 @@ def get_recent_attempts(session_id: str, limit: int = 5) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# topic_coverage — which topics this session has actually been quizzed on
+# topic_progress — per-topic mastery streak
 # ---------------------------------------------------------------------------
 
-def mark_topics_covered(session_id: str, domain: str, topics: list[str]) -> None:
+def record_topic_answer(session_id: str, domain: str, topic: str, is_correct: bool) -> None:
     """
-    Record that this session has now been quizzed on each topic in `topics`
-    (diagnostic questions answered, or a practice round's target topics —
-    see service.submit_assessment / service.record_practice_result). Safe to
-    call repeatedly with the same topic; `INSERT OR IGNORE` means the second
-    and later calls are no-ops (first_seen_at never changes, coverage is a
-    one-way door).
+    Record one attempt at `topic` — right or wrong. On a correct answer,
+    `correct_streak` increments (one step closer to
+    service.MASTERY_STREAK_THRESHOLD); on a wrong answer, it resets straight
+    to 0, regardless of how high it was. That reset is the entire "ability
+    to lose progress" mechanic — a topic that was one answer away from
+    mastered goes back to needing a fresh streak from scratch the moment
+    it's missed. `total_attempts`/`total_correct` just accumulate either way,
+    for display (lifetime accuracy on this topic), not for gating anything.
+
+    Called once per question for the diagnostic (exact per-question
+    correctness — see service.submit_assessment), and once per target topic
+    for a practice round (one pass/fail verdict for the whole round applied
+    to every topic it targeted, since practice games only report one
+    aggregate score — see service.record_practice_result).
     """
-    if not topics:
-        return
     conn = _conn()
     now = datetime.datetime.utcnow().isoformat()
-    conn.executemany(
-        "INSERT OR IGNORE INTO topic_coverage (session_id, domain, topic, first_seen_at) "
-        "VALUES (?, ?, ?, ?)",
-        [(session_id, domain, topic, now) for topic in topics],
+    correct_flag = 1 if is_correct else 0
+    conn.execute(
+        """
+        INSERT INTO topic_progress
+            (session_id, domain, topic, correct_streak, total_attempts, total_correct, updated_at)
+        VALUES (?, ?, ?, ?, 1, ?, ?)
+        ON CONFLICT(session_id, domain, topic) DO UPDATE SET
+            correct_streak = CASE WHEN ? THEN correct_streak + 1 ELSE 0 END,
+            total_attempts = total_attempts + 1,
+            total_correct = total_correct + ?,
+            updated_at = excluded.updated_at
+        """,
+        (session_id, domain, topic, correct_flag, correct_flag, now, correct_flag, correct_flag),
     )
     conn.commit()
     conn.close()
 
 
-def get_covered_topics(session_id: str, domain: str) -> set[str]:
-    """Every topic in `domain` this session has been quizzed on at least once."""
+def get_topic_progress(session_id: str, domain: str) -> dict[str, dict]:
+    """{topic: {correct_streak, total_attempts, total_correct}} for every
+    topic in `domain` this session has attempted at least once. A topic with
+    no row simply has no entry — callers should treat that as streak 0,
+    never attempted."""
     conn = _conn()
     rows = conn.execute(
-        "SELECT topic FROM topic_coverage WHERE session_id = ? AND domain = ?",
+        "SELECT topic, correct_streak, total_attempts, total_correct FROM topic_progress "
+        "WHERE session_id = ? AND domain = ?",
         (session_id, domain),
     ).fetchall()
     conn.close()
-    return {row["topic"] for row in rows}
+    return {
+        row["topic"]: {
+            "correct_streak": row["correct_streak"],
+            "total_attempts": row["total_attempts"],
+            "total_correct": row["total_correct"],
+        }
+        for row in rows
+    }
+
+
+def get_mastered_topics(session_id: str, domain: str, threshold: int) -> set[str]:
+    """Topics in `domain` whose current correct_streak has reached
+    `threshold` — see service.MASTERY_STREAK_THRESHOLD."""
+    progress = get_topic_progress(session_id, domain)
+    return {topic for topic, p in progress.items() if p["correct_streak"] >= threshold}
+
+
+def get_attempted_topics(session_id: str, domain: str) -> set[str]:
+    """Every topic in `domain` this session has attempted at least once,
+    mastered or not — purely informational ("X touched, Y mastered" in the
+    UI), not itself a gate on anything."""
+    return set(get_topic_progress(session_id, domain).keys())

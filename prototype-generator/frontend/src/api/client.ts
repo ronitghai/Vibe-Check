@@ -124,9 +124,12 @@ export interface MissedExplanation {
 /** One row of the progress table for one AZ-900 domain. `practiceCount` is
  * how many practice games have actually been PLAYED (and scored) for this
  * domain — see PlayView's postMessage listener, not a manual click.
- * `masteryPct` is GATED by concept coverage (see backend service.py's
- * get_progress_summary) — it can't reach 100 until topicsCovered ==
- * topicsTotal, no matter how high the underlying accuracy is. */
+ * `masteryPct` is literally topicsMastered/topicsTotal (see backend
+ * service.py's get_progress_summary) — a topic only counts once answered
+ * correctly MASTERY_STREAK_THRESHOLD times IN A ROW, and a single miss
+ * resets its streak to 0, so this can go down as well as up.
+ * `topicsCovered` (attempted at least once) is informational only — it
+ * does NOT gate masteryPct, `topicsMastered` does. */
 export interface DomainMasteryApi {
   domain: string;
   correct: number;
@@ -134,6 +137,7 @@ export interface DomainMasteryApi {
   masteryPct: number;
   practiceCount: number;
   topicsCovered: number;
+  topicsMastered: number;
   topicsTotal: number;
 }
 
@@ -183,6 +187,60 @@ export interface GameResult {
   domain: string;
   correct: number;
   total: number;
+}
+
+/** One topic's worth of Study section content — see Az900Study.tsx. Plain
+ * reference material, not adaptive, not session-scoped: same for every
+ * learner, reachable before a diagnostic even exists. */
+export interface StudyTopic {
+  topic: string;
+  label: string;
+  concepts: string[];
+  sources: string[];
+}
+
+export interface StudyDomain {
+  domain: string;
+  topics: StudyTopic[];
+}
+
+export interface StudyResponse {
+  domains: StudyDomain[];
+}
+
+/** Fetch the full Study section content — every topic, its concepts, and
+ * real Microsoft Learn sources, grouped by domain. No session_id: this is
+ * the same for everyone. */
+export async function fetchStudyContent(): Promise<StudyResponse> {
+  const res = await fetch(`${API_BASE}/api/az900/study`);
+  if (!res.ok) throw new Error(`Study content fetch failed: ${res.status}`);
+  return res.json();
+}
+
+/** One topic the learner has actually struggled with — attempted but not
+ * yet mastered, worst-first — with its explanation attached. See
+ * Az900WeakConcepts.tsx and backend service.py's get_weak_concepts. */
+export interface WeakConceptTopic {
+  domain: string;
+  topic: string;
+  label: string;
+  concepts: string[];
+  sources: string[];
+  correctStreak: number;
+  totalAttempts: number;
+  totalCorrect: number;
+}
+
+export interface WeakConceptsResponse {
+  topics: WeakConceptTopic[];
+}
+
+/** Fetch this session's actual weak spots (attempted, not yet mastered),
+ * ranked worst-first, with explanations attached. */
+export async function fetchWeakConcepts(sessionId: string): Promise<WeakConceptsResponse> {
+  const res = await fetch(`${API_BASE}/api/az900/weak-concepts/${sessionId}`);
+  if (!res.ok) throw new Error(`Weak concepts fetch failed: ${res.status}`);
+  return res.json();
 }
 
 /** Kick off a new 10-question diagnostic for this session. */

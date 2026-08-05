@@ -572,18 +572,109 @@
   width: 100%;
 }
 
-/* Total concept-coverage line under the top progress bar (see
+/* Total concept-mastery line under the top progress bar (see
    Az900GameWindow.tsx) — explains why the bar can sit well below 100% even
-   at perfect accuracy. */
+   after good performance, since a concept needs 2 correct answers in a row
+   (not just 1) to actually count. */
 .az900-coverage-line {
   padding: 8px 32px 0;
   font-size: 12px;
   color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.az900-study-link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
+}
+
+.az900-study-link:hover {
+  color: var(--accent-strong);
+  text-decoration: underline;
 }
 
 .az900-menu {
   flex: 3 1 400px;
   min-width: 0;
+}
+
+/* Az900Study.tsx — plain-text concept review, outside the game loop. */
+.az900-study-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.az900-study-tab {
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.az900-study-tab:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.az900-study-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+
+.az900-study-topics {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.az900-study-topic {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+}
+
+.az900-study-topic h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.az900-study-topic ul {
+  margin: 0 0 10px;
+  padding-left: 20px;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.az900-study-topic li {
+  margin-bottom: 6px;
+}
+
+.az900-study-sources {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.az900-study-sources a {
+  color: var(--accent);
 }
 
 /* AZ-900 summary modal (reuses .drawer-backdrop for the dim overlay) */
@@ -713,4 +804,54 @@
 .recommendation-card h3 { margin:4px 0 6px; }
 .recommendation-card p { margin:5px 0; color:var(--text-muted,#94a3b8); }
 .recommendation-card .error,.status-text.error { color:#fca5a5; }
+
+/* Az900WeakConcepts.tsx — sits inside .az900-window's flex-wrap row
+   alongside Az900WeakAreas/Az900GameMenu; flex-basis:100% forces it onto
+   its own full-width row underneath them rather than trying to squeeze in
+   beside the sidebar. Reuses .az900-study-topic/.az900-study-sources from
+   the Study section (same content shape, just pre-filtered), so only the
+   parts unique to this panel (the header row + stat + domain tag) need
+   their own rules. */
+.az900-weak-concepts {
+  flex: 1 1 100%;
+}
+
+.az900-weak-concepts-sub {
+  margin: 4px 0 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.az900-weak-concepts-empty {
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 520px;
+}
+
+.az900-weak-concept-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.az900-weak-concept-header h3 {
+  margin: 0;
+}
+
+.az900-weak-concept-stat {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--warning);
+  white-space: nowrap;
+}
+
+.az900-weak-concept-domain {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
 @media (max-width:760px){.recommendation-card{margin:14px;flex-direction:column;align-items:flex-start}}

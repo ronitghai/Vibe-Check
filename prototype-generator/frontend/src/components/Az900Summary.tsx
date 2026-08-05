@@ -69,7 +69,7 @@ export default function Az900Summary({ result, sessionId, onClose, onPlay }: Pro
                 <div className="az900-explanation" key={i}>
                   <div className="az900-explanation-q">{e.question}</div>
                   <div className="az900-explanation-detail">
-                    You answered <em>{e.yourAnswer ?? "nothing"}</em> — correct answer:{" "}
+                    You answered <em>{e.yourAnswer ?? "nothing"}</em>, correct answer:{" "}
                     <em>{e.correctAnswer}</em>
                   </div>
                   {/* This text is always the hand-authored knowledge_base.py

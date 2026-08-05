@@ -23,9 +23,29 @@ from ..learning.models import (
     GeneratePracticeGameRequest,
     GeneratePracticeGameResponse,
     PracticeResultRequest,
+    StudyResponse,
+    WeakConceptsResponse,
 )
 
 router = APIRouter(prefix="/api/az900")
+
+
+@router.get("/study", response_model=StudyResponse)
+def study() -> StudyResponse:
+    """Plain reference content for the Study section — every topic's label,
+    concepts, and real sources, grouped by domain. Not session-scoped (same
+    for everyone) and reachable before a diagnostic even exists, unlike
+    every other endpoint here. See service.get_study_content."""
+    return StudyResponse(**service.get_study_content())
+
+
+@router.get("/weak-concepts/{session_id}", response_model=WeakConceptsResponse)
+def weak_concepts(session_id: str) -> WeakConceptsResponse:
+    """This session's actual weak spots (attempted, not yet mastered),
+    ranked worst-first, with their explanations attached — see
+    service.get_weak_concepts. Powers the Game Menu's "Focus on your weak
+    concepts" panel."""
+    return WeakConceptsResponse(**service.get_weak_concepts(session_id))
 
 
 @router.post("/assessment/start", response_model=AssessmentStartResponse)

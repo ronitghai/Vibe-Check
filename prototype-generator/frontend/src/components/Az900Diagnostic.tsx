@@ -77,7 +77,7 @@ export default function Az900Diagnostic({ sessionId, onSubmitted, onBack }: Prop
     <div className="az900">
       <Az900ProgressBar
         value={progressPct}
-        label="Diagnostic — complete it to unlock your Game Menu"
+        label="Diagnostic, complete it to unlock your Game Menu"
       />
 
       <div className="az900-body">

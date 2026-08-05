@@ -70,15 +70,17 @@ class MissedExplanation(BaseModel):
 class DomainMastery(BaseModel):
     """One row of the progress table — used both in an assessment's result
     payload and in the dashboard/game-menu response below. masteryPct is
-    GATED by concept coverage (see service.get_progress_summary) — it can't
-    reach 100 until topicsCovered == topicsTotal for this domain, no matter
-    how high the underlying accuracy is."""
+    literally topicsMastered/topicsTotal (see service.get_progress_summary)
+    — a topic only counts once it's been answered correctly
+    MASTERY_STREAK_THRESHOLD times IN A ROW, and a single miss resets that
+    topic's streak to 0, so masteryPct can go DOWN as well as up."""
     domain: str
     correct: int
     total: int
     masteryPct: int
     practiceCount: int = 0  # how many practice games have been PLAYED (and scored) for this domain
-    topicsCovered: int = 0  # distinct topics quizzed at least once (diagnostic or practice)
+    topicsCovered: int = 0  # distinct topics attempted at least once — informational, doesn't gate masteryPct
+    topicsMastered: int = 0  # topics with a correct streak >= MASTERY_STREAK_THRESHOLD — this DOES gate masteryPct
     topicsTotal: int = 0  # total topics that exist for this domain (knowledge_base.TOPICS_BY_DOMAIN)
 
 
@@ -130,6 +132,46 @@ class DashboardResponse(BaseModel):
     weakestDomain: str
     overallProgress: int  # 0-100, see service.get_progress_summary for the formula
     recommendedActivity: Optional[RecommendedActivity] = None
+
+
+# --- GET /api/az900/study ---
+# Plain reference content, outside the game/scoring loop entirely — same for
+# every session, no session_id needed. See learning/service.py's
+# get_study_content.
+
+class StudyTopic(BaseModel):
+    topic: str
+    label: str  # the official AZ-900 skill-bullet text, e.g. "Describe the shared responsibility model"
+    concepts: List[str]  # every fact written for this topic
+    sources: List[str]  # real Microsoft Learn URLs these concepts are grounded in
+
+
+class StudyDomain(BaseModel):
+    domain: str
+    topics: List[StudyTopic]
+
+
+class StudyResponse(BaseModel):
+    domains: List[StudyDomain]
+
+
+# --- GET /api/az900/weak-concepts/{session_id} ---
+# The learner's actual struggling topics (attempted, not yet mastered),
+# explained inline — see learning/service.py's get_weak_concepts.
+
+class WeakConceptTopic(BaseModel):
+    domain: str
+    topic: str
+    label: str
+    concepts: List[str]
+    sources: List[str]
+    correctStreak: int
+    totalAttempts: int
+    totalCorrect: int
+
+
+class WeakConceptsResponse(BaseModel):
+    topics: List[WeakConceptTopic]
 
 
 class PracticeResultRequest(BaseModel):

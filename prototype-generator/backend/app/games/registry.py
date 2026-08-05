@@ -1,8 +1,44 @@
-"""Curated learning-activity registry for the AZ-900 MVP.
+"""
+registry.py
+------------
+Maps a game_id (what the frontend/backend pass around everywhere — Game
+Menu cards, launch requests, practice results) to its template HTML file
+and default config. Two callers depend on this file:
+
+  - learning/service.py's generate_practice_content() looks up a game_id's
+    template file and merges its own AZ-900-grounded config on top of
+    `defaults` via merge_config() below — so a template's `defaults` are
+    what renders if the LLM generation ever fails/times out, same safety
+    net every content generator in service.py already has.
+  - learning/service.py's record_practice_result() reads `mastery_weight`
+    to decide how strongly one game's real score should move the domain
+    mastery accumulator (see that function's own docstring for why retrieval/
+    application activities count more than quick vocabulary review).
 
 Only mechanics that directly retrieve, apply, or reinforce certification
-knowledge are exposed. Entertainment-first templates were intentionally
-removed after prototype validation.
+knowledge are exposed — entertainment-first templates (tic-tac-toe, wheel of
+fortune, memory match) were intentionally removed after prototype validation
+in favor of these 5.
+
+EACH ENTRY IN GAMES:
+  title          — shown on the Game Menu card and in the launched game's title bar.
+  file           — the HTML filename under games/library/, loaded by load_template_html().
+  description    — shown on the Game Menu card, under the title.
+  learning_mode  — a free-text label describing the pedagogical style (retrieval_practice,
+                   application_practice, relationship_learning, recall_practice,
+                   retrieval_and_application). Purely descriptive right now — nothing reads
+                   it programmatically — but keep it accurate if you add a game, since it's
+                   the fastest way for a future contributor to understand *why* a game exists
+                   without reading its whole template.
+  mastery_weight — how strongly this game's real score moves domain_mastery relative to a
+                   1.0 baseline (rapid_quiz/scenario_challenge/jeopardy are full-weight
+                   "did you actually know this"; matching_game is 0.6 and crossword is 0.35,
+                   since correctly matching or filling in a word is a weaker signal of real
+                   understanding than answering a cold quiz question). See
+                   service.record_practice_result for exactly how this gets applied.
+  defaults       — the config a template renders with if nothing else is supplied — either
+                   because the LLM-generation path failed (see merge_config below) or because
+                   a caller launched the template directly with no content of its own.
 """
 
 import os
@@ -328,6 +364,9 @@ GAMES = {
 
 
 def list_templates() -> list:
+    """Every game_id in GAMES, as the shape the frontend's Game Menu / library
+    list expects — title + description only, no config or file path (those
+    are internal, only load_template_html/merge_config need them)."""
     return [
         {
             "game_id": game_id,
@@ -340,12 +379,24 @@ def list_templates() -> list:
 
 
 def load_template_html(game_id: str) -> str:
+    """Read one game's raw HTML file off disk. Raw — no design-system CSS/JS
+    injected yet and no config baked in; that's games/bundle.py's job
+    (called separately, after this), which every launch path goes through
+    regardless of where the game_id/config came from."""
     path = os.path.join(LIBRARY_DIR, GAMES[game_id]["file"])
     with open(path, "r", encoding="utf-8") as f:
         return f.read()
 
 
 def merge_config(game_id: str, config: dict) -> dict:
+    """Overlay `config` on top of this game_id's `defaults`, key by key —
+    NOT a shallow dict merge that would silently keep an empty/falsy value
+    from `config` and hide the default underneath it. Any key in `config`
+    that's None/""/[]/{} is treated as "didn't actually supply this" and the
+    default shows through instead — this is what makes a partial or failed
+    LLM generation degrade gracefully to real, curated content instead of a
+    game rendering half-empty (see every content generator in
+    learning/service.py, which all funnel through this one function)."""
     defaults = GAMES[game_id]["defaults"]
     config = config or {}
     merged = dict(defaults)

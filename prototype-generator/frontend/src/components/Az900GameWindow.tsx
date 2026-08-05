@@ -13,6 +13,11 @@
  *      plus "Retake Diagnostic".
  *   3. Az900GameMenu (right) — curated learning activities; clicking one opens a domain
  *      picker (Az900DomainPicker) rather than launching directly.
+ *   4. Az900WeakConcepts (full width, below the first two) — the actual
+ *      TOPIC-level struggling spots, with their explanations shown inline,
+ *      not just a domain percentage. Re-fetches on the same refreshKey as
+ *      everything else here, so a topic drops off this list the instant
+ *      it's mastered.
  *
  * Domain selection no longer lives here — each game launch asks "which
  * domain?" at the moment it's picked (see Az900GameMenu/Az900DomainPicker),
@@ -24,6 +29,7 @@ import { fetchDashboard } from "../api/client";
 import Az900ProgressBar from "./Az900ProgressBar";
 import Az900WeakAreas from "./Az900WeakAreas";
 import Az900GameMenu from "./Az900GameMenu";
+import Az900WeakConcepts from "./Az900WeakConcepts";
 import Az900RecommendationCard from "./Az900RecommendationCard";
 import type { RecommendedActivityApi } from "../api/client";
 import type { DomainMastery, PlayingGame } from "../types";
@@ -38,6 +44,7 @@ interface Props {
    * and sends the learner back to the gate — wired all the way up through
    * App.tsx since resetting also has to blow away App's own view state. */
   onResetProgress: () => void;
+  onStudy: () => void;
   onPlay: (game: PlayingGame, az900GameId: string, az900Domain: string) => void;
 }
 
@@ -46,6 +53,7 @@ export default function Az900GameWindow({
   refreshKey,
   onRetakeDiagnostic,
   onResetProgress,
+  onStudy,
   onPlay,
 }: Props) {
   const [domains, setDomains] = useState<DomainMastery[]>([]);
@@ -78,6 +86,7 @@ export default function Az900GameWindow({
   }
 
   const topicsCovered = domains.reduce((sum, d) => sum + d.topicsCovered, 0);
+  const topicsMastered = domains.reduce((sum, d) => sum + d.topicsMastered, 0);
   const topicsTotal = domains.reduce((sum, d) => sum + d.topicsTotal, 0);
 
   return (
@@ -85,7 +94,11 @@ export default function Az900GameWindow({
       <Az900ProgressBar value={overallProgress} label="Program Progress" />
       {topicsTotal > 0 && (
         <div className="az900-coverage-line">
-          {topicsCovered}/{topicsTotal} concepts covered — 100% requires covering every concept
+          {topicsMastered}/{topicsTotal} concepts mastered ({topicsCovered} touched), a concept needs 2 correct
+          answers in a row to count, and a miss resets it
+          <button className="az900-study-link" onClick={onStudy}>
+            Study Concepts →
+          </button>
         </div>
       )}
       {error && <div className="status-text error">{error}</div>}
@@ -99,6 +112,7 @@ export default function Az900GameWindow({
           weakestDomain={weakestDomain}
           onPlay={onPlay}
         />
+        <Az900WeakConcepts sessionId={sessionId} refreshKey={refreshKey} />
       </div>
     </div>
   );

@@ -9,15 +9,24 @@
  *
  * This app is a single-purpose AZ-900 study companion — there is no general
  * game library and no way to reach a game without going through the
- * diagnostic first. FOUR SCREENS:
+ * diagnostic first. FIVE SCREENS:
  *   "az900-gate"          — the landing prompt, first thing ANY session
  *                            sees (Az900Gate.tsx) — nothing playable here,
- *                            just "Start Diagnostic".
+ *                            just "Start Diagnostic" (and "Study Concepts
+ *                            First", see below).
  *   "az900-diagnostic"    — the AZ-900 10-question diagnostic (Az900Diagnostic.tsx)
  *   "az900-game-window"   — AZ-900 progress bar + weak areas + game menu,
  *                            unlocked only once a diagnostic exists
  *                            (Az900GameWindow.tsx). The "✨ Generate a game"
  *                            chat drawer also only mounts on this screen.
+ *   "az900-study"         — plain-text reference reading, OUTSIDE the game/
+ *                            scoring loop entirely (Az900Study.tsx). The one
+ *                            screen reachable from BOTH the gate (before a
+ *                            diagnostic exists — "review before you're
+ *                            tested" has to work pre-diagnostic) and the
+ *                            Game Window (to look something up afterward) —
+ *                            see studyReturnView below for how it gets back
+ *                            to whichever one sent it here.
  *   "play"                — one game, fullscreen (PlayView.tsx) — used by
  *                            every launch path (Game Menu cards, chat).
  *
@@ -45,6 +54,7 @@ import ChatDrawer from "./components/ChatDrawer";
 import Az900Gate from "./components/Az900Gate";
 import Az900GameWindow from "./components/Az900GameWindow";
 import Az900Diagnostic from "./components/Az900Diagnostic";
+import Az900Study from "./components/Az900Study";
 import Az900Summary from "./components/Az900Summary";
 import { fetchDashboard, reportPracticeResult } from "./api/client";
 import { getSessionId, resetSession } from "./session";
@@ -52,7 +62,7 @@ import type { PlayingGame } from "./types";
 import type { AssessmentSubmitResponse, GameResult } from "./api/client";
 import "./App.css";
 
-type View = "az900-gate" | "az900-diagnostic" | "az900-game-window" | "play";
+type View = "az900-gate" | "az900-diagnostic" | "az900-game-window" | "az900-study" | "play";
 
 export default function App() {
   const [sessionId] = useState(getSessionId);
@@ -85,6 +95,13 @@ export default function App() {
   // Non-null right after submitting a diagnostic -> shows the results modal
   // on top of whatever screen is behind it. Set back to null to dismiss.
   const [az900Summary, setAz900Summary] = useState<AssessmentSubmitResponse | null>(null);
+
+  // --- Study screen state ---
+  // Where "← Back" on Az900Study should return to — it's reachable from
+  // both the gate and the Game Window, so this has to be remembered rather
+  // than hardcoded (unlike PlayView, which always returns to the Game
+  // Window since nothing else launches a game).
+  const [studyReturnView, setStudyReturnView] = useState<View>("az900-gate");
 
   // The gate check described in this file's top comment — runs once, on
   // mount, for every session.
@@ -145,6 +162,13 @@ export default function App() {
     window.location.reload();
   }
 
+  /** Opens Study from wherever the learner currently is — remembers that
+   * screen in studyReturnView so "← Back" lands them where they started. */
+  function openStudy() {
+    setStudyReturnView(view === "az900-game-window" ? "az900-game-window" : "az900-gate");
+    setView("az900-study");
+  }
+
   function renderMain() {
     if (view === "az900-game-window") {
       return (
@@ -153,6 +177,7 @@ export default function App() {
           refreshKey={az900Version}
           onRetakeDiagnostic={() => setView("az900-diagnostic")}
           onResetProgress={handleResetProgress}
+          onStudy={openStudy}
           onPlay={(game, gameId, domain) => handlePlay(game, gameId, domain)}
         />
       );
@@ -178,8 +203,16 @@ export default function App() {
         />
       );
     }
+    if (view === "az900-study") {
+      return (
+        <Az900Study
+          backLabel={studyReturnView === "az900-game-window" ? "← Back to AZ-900 Prep" : "← Back"}
+          onBack={() => setView(studyReturnView)}
+        />
+      );
+    }
     if (view === "az900-gate") {
-      return <Az900Gate onStart={() => setView("az900-diagnostic")} />;
+      return <Az900Gate onStart={() => setView("az900-diagnostic")} onStudy={openStudy} />;
     }
     return null; // still resolving the mount-time gate check — render nothing rather than flash a screen
   }

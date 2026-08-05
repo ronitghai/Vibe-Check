@@ -18,7 +18,7 @@ import type { ChatMessage } from "../types";
 const WELCOME: ChatMessage = {
   role: "assistant",
   content:
-    'Hi! Ask me for a game and I\'ll build it from real AZ-900 material — try "quiz me on Azure pricing" or "help me practice availability zones".',
+    'Hi! Ask me for a game and I\'ll build it from real AZ-900 material, try "quiz me on Azure pricing" or "help me practice availability zones".',
 };
 
 interface Props {
@@ -64,7 +64,7 @@ export default function ChatWindow({ sessionId, onGameLaunched }: Props) {
     } catch {
       setMessages((m) => [
         ...m,
-        { role: "assistant", content: "Couldn't reach the server — is the backend running?" },
+        { role: "assistant", content: "Couldn't reach the server - is the backend running?" },
       ]);
     } finally {
       setBusy(false);

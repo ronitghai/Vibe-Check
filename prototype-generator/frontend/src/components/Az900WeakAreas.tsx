@@ -50,8 +50,8 @@ export default function Az900WeakAreas({ domains, onRetakeDiagnostic, onResetPro
               <div className="az900-bar-fill" style={{ width: `${d.masteryPct}%` }} />
             </div>
             <div className="az900-sidebar-item-meta">
-              {d.topicsCovered}/{d.topicsTotal} concepts covered · {d.practiceCount} practice round
-              {d.practiceCount === 1 ? "" : "s"} played
+              {d.topicsMastered}/{d.topicsTotal} mastered ({d.topicsCovered} touched) · {d.practiceCount} practice
+              round{d.practiceCount === 1 ? "" : "s"} played
             </div>
           </div>
         ))}

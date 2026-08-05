@@ -3,18 +3,22 @@
  * --------------
  * The very first thing a brand-new session sees (see App.tsx's mount-time
  * dashboard check) — a plain prompt, not the quiz itself and not the Game
- * Menu. Nothing is playable from here; the ONLY action is starting the
- * diagnostic. This is what makes "you cannot play any games before the
- * diagnostic" literally true: there is no menu, no library, nothing to
- * click except "Start Diagnostic" until App.tsx switches to
- * "az900-diagnostic".
+ * Menu. Nothing PLAYABLE is reachable from here; the only game-adjacent
+ * action is starting the diagnostic. This is what makes "you cannot play
+ * any games before the diagnostic" literally true: there is no menu, no
+ * library, nothing to click except "Start Diagnostic" until App.tsx
+ * switches to "az900-diagnostic" — EXCEPT "Study Concepts", which is a
+ * deliberate exception, not a loophole: it's plain reading material, no
+ * scoring, no games, so "review concepts before you're tested" can
+ * actually happen before the diagnostic exists at all.
  */
 
 interface Props {
   onStart: () => void;
+  onStudy: () => void;
 }
 
-export default function Az900Gate({ onStart }: Props) {
+export default function Az900Gate({ onStart, onStudy }: Props) {
   return (
     <div className="az900-gate">
       <div className="az900-gate-card">
@@ -26,6 +30,9 @@ export default function Az900Gate({ onStart }: Props) {
         </p>
         <button className="btn" onClick={onStart}>
           Start Diagnostic
+        </button>
+        <button className="btn btn-secondary" onClick={onStudy}>
+          Study Concepts First
         </button>
       </div>
     </div>

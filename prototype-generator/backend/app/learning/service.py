@@ -39,15 +39,37 @@ from .knowledge_base import (
     FALLBACK_MATCHING,
     QUESTION_BANK,
     SNIPPETS,
+    TOPIC_LABELS,
+    TOPIC_SOURCES,
     TOPICS_BY_DOMAIN,
     get_snippet_for_topic,
 )
 
 client = OpenAI(api_key=app_config.GROQ_API_KEY, base_url=app_config.GROQ_BASE_URL)
 
-# How many questions a diagnostic assessment contains. Spread as evenly as
-# possible across the 3 DOMAINS by start_assessment() below.
+# How many questions a diagnostic assessment contains. Spread across the 3
+# DOMAINS proportional to DOMAIN_WEIGHTS by start_assessment() below.
 ASSESSMENT_SIZE = 10
+
+# How many times in a row a topic must be answered correctly, with no miss
+# in between, to count as "mastered" for the progress bar (see
+# get_progress_summary). 2 means "right, then right again" — enough to rule
+# out a lucky guess without turning this into a grind. A single wrong
+# answer resets the streak to 0 no matter how high it was — see
+# store.record_topic_answer — so a topic mastered yesterday can genuinely
+# un-master itself today.
+MASTERY_STREAK_THRESHOLD = 2
+
+# A practice round only reports ONE aggregate score for however many topics
+# it targeted (see TOPICS_PER_PRACTICE_ROUND below) — there's no per-question
+# breakdown to attribute correctness to individual topics. So the whole
+# round is treated as a single pass/fail rep, applied identically to every
+# topic it targeted: score at or above this fraction counts as a correct
+# rep (streak +1) for all of them, below it counts as a miss (streak reset
+# to 0) for all of them. Set below 1.0 so one slip in an 8-question round
+# doesn't erase progress on topics the learner actually knows — but still
+# demanding enough that a lucky guess or two can't carry a whole round.
+PRACTICE_ROUND_PASS_FRACTION = 0.75
 
 QUIZ_GEN_SYSTEM_PROMPT = """You write multiple choice quiz questions for an AZ-900 (Microsoft \
 Azure Fundamentals) study game. You MUST base every question strictly on the provided facts — \
@@ -133,6 +155,99 @@ Requirements:
 
 
 # ===========================================================================
+# Study content — plain-text reference material, outside the game loop
+# entirely. Reachable from the gate (before the diagnostic even exists) AND
+# from the Game Menu, since "review before being tested" and "review a weak
+# spot afterward" are both real use cases. Deliberately NOT session-scoped
+# or adaptive — same content for everyone, no LLM involved, just the exact
+# facts + real Microsoft Learn citations already backing the rest of the
+# app (see knowledge_base.py's TOPIC_LABELS/TOPIC_SOURCES and that file's
+# own docstring for where the citations came from).
+# ===========================================================================
+
+def _concepts_by_topic(domain: str) -> dict[str, list[str]]:
+    """Every SNIPPETS entry for `domain`, grouped by topic — shared by
+    get_study_content and get_weak_concepts so both read the same content
+    the same way."""
+    grouped: dict[str, list[str]] = {}
+    for entry in SNIPPETS[domain]:
+        grouped.setdefault(entry["topic"], []).append(entry["snippet"])
+    return grouped
+
+
+def get_study_content() -> dict:
+    """
+    Every topic, grouped by domain: its official skill-bullet label, every
+    concept sentence written for it, and the real source page(s) those
+    concepts are grounded in. See routers/az900.py's GET /api/az900/study.
+    """
+    domains = []
+    for domain in DOMAINS:
+        concepts_by_topic = _concepts_by_topic(domain)
+        topics = [
+            {
+                "topic": topic,
+                "label": TOPIC_LABELS[domain][topic],
+                "concepts": concepts_by_topic.get(topic, []),
+                "sources": TOPIC_SOURCES[domain].get(topic, []),
+            }
+            for topic in TOPICS_BY_DOMAIN[domain]
+        ]
+        domains.append({"domain": domain, "topics": topics})
+
+    return {"domains": domains}
+
+
+# How many weak topics to surface on the Game Menu at once — see
+# get_weak_concepts. Enough to fill the space usefully without turning it
+# into a second Study section.
+WEAK_CONCEPTS_LIMIT = 6
+
+
+def get_weak_concepts(session_id: str, limit: int = WEAK_CONCEPTS_LIMIT) -> dict:
+    """
+    The learner's actual weak spots, explained inline — topics they've
+    ATTEMPTED at least once but haven't mastered yet (streak <
+    MASTERY_STREAK_THRESHOLD), ranked worst-first by accuracy so far (ties
+    broken by more attempts first — more attempts at a low accuracy is a
+    clearer signal of a real weak spot than one unlucky guess). Topics never
+    attempted at all are deliberately excluded: "weak" means "struggled
+    with", not "haven't gotten to yet" (that's what the Study section and
+    the Weak Areas domain panel are for).
+
+    Returns the same per-topic shape as get_study_content's topics (label,
+    concepts, sources) plus this session's actual performance on each one,
+    so the frontend can show both the stat and the explanation together.
+    """
+    candidates = []
+    for domain in DOMAINS:
+        progress = store.get_topic_progress(session_id, domain)
+        concepts_by_topic = _concepts_by_topic(domain)
+        for topic, p in progress.items():
+            if p["correct_streak"] >= MASTERY_STREAK_THRESHOLD:
+                continue  # already mastered — not weak
+            accuracy = p["total_correct"] / p["total_attempts"] if p["total_attempts"] else 0
+            candidates.append({
+                "domain": domain,
+                "topic": topic,
+                "label": TOPIC_LABELS[domain][topic],
+                "concepts": concepts_by_topic.get(topic, []),
+                "sources": TOPIC_SOURCES[domain].get(topic, []),
+                "correctStreak": p["correct_streak"],
+                "totalAttempts": p["total_attempts"],
+                "totalCorrect": p["total_correct"],
+                "_sort_key": (accuracy, -p["total_attempts"]),
+            })
+
+    candidates.sort(key=lambda c: c["_sort_key"])
+    weakest = candidates[:limit]
+    for c in weakest:
+        del c["_sort_key"]
+
+    return {"topics": weakest}
+
+
+# ===========================================================================
 # Diagnostic assessment
 # ===========================================================================
 
@@ -156,45 +271,46 @@ def _weighted_question_counts(total: int) -> dict[str, int]:
     return counts
 
 
-def _topics_uncovered_first(session_id: str, domain: str) -> list[str]:
+def _topics_needing_practice_first(session_id: str, domain: str) -> list[str]:
     """
     Every topic in `domain` (from knowledge_base.TOPICS_BY_DOMAIN), with
-    topics this session hasn't been quizzed on yet shuffled to the front.
-    Shared by the diagnostic (_pick_questions_for_domain) and practice
-    content generation (_pick_target_topics) — both need the same "haven't
-    seen this yet beats already-covered" priority so that using either path
-    actually advances the learner toward full coverage instead of
-    re-covering the same handful of topics forever.
+    NOT-YET-MASTERED topics (streak < MASTERY_STREAK_THRESHOLD — including
+    never-attempted ones) shuffled to the front, ahead of already-mastered
+    ones. Shared by the diagnostic (_pick_questions_for_domain) and practice
+    content generation (_pick_target_topics) — both need the same priority
+    so that using either path actually moves the learner toward full
+    mastery instead of re-testing the same handful of topics they've
+    already nailed twice.
     """
-    covered = store.get_covered_topics(session_id, domain)
+    mastered = store.get_mastered_topics(session_id, domain, MASTERY_STREAK_THRESHOLD)
     all_topics = list(TOPICS_BY_DOMAIN[domain])
-    uncovered = [t for t in all_topics if t not in covered]
-    seen = [t for t in all_topics if t in covered]
-    random.shuffle(uncovered)
-    random.shuffle(seen)
-    return uncovered + seen
+    needs_practice = [t for t in all_topics if t not in mastered]
+    already_mastered = [t for t in all_topics if t in mastered]
+    random.shuffle(needs_practice)
+    random.shuffle(already_mastered)
+    return needs_practice + already_mastered
 
 
 def _pick_questions_for_domain(session_id: str, domain: str, count: int) -> list[dict]:
     """
     Pick `count` questions from QUESTION_BANK[domain] for one diagnostic,
-    prioritizing DISTINCT topics the session hasn't been quizzed on yet —
-    not just random questions, which could easily pick 2 questions from the
-    same already-covered topic while ignoring an untouched one (each topic
+    prioritizing DISTINCT topics that aren't mastered yet — not just random
+    questions, which could easily pick 2 questions from the same
+    already-mastered topic while ignoring one that needs work (each topic
     has ~7 questions, so pure random sampling wastes a lot of a diagnostic's
-    limited question budget). This is what makes "retake the diagnostic"
-    an effective way to raise topic coverage (see get_progress_summary),
-    not just a way to re-roll the same handful of topics.
+    limited question budget). This is what makes "retake the diagnostic" an
+    effective way to work toward mastery (see get_progress_summary), not
+    just a way to re-roll the same handful of topics.
 
     Within a chosen topic, the specific question is picked at random from
     that topic's pool (~7 questions), so repeats stay varied even after
-    every topic is covered.
+    every topic is mastered.
     """
     by_topic: dict[str, list[dict]] = {}
     for q in QUESTION_BANK[domain]:
         by_topic.setdefault(q["topic"], []).append(q)
 
-    topic_order = [t for t in _topics_uncovered_first(session_id, domain) if t in by_topic]
+    topic_order = [t for t in _topics_needing_practice_first(session_id, domain) if t in by_topic]
     return [random.choice(by_topic[topic]) for topic in topic_order[:count]]
 
 
@@ -204,7 +320,7 @@ def start_assessment(session_id: str) -> dict:
     QUESTION_BANK, spread across the 3 domains proportional to their REAL
     AZ-900 exam weight (see DOMAIN_WEIGHTS in knowledge_base.py — 25-30% /
     35-40% / 30-35%, not a flat 1/3 each) and, within each domain,
-    prioritizing topics this session hasn't covered yet (see
+    prioritizing topics that aren't mastered yet (see
     _pick_questions_for_domain) — shuffle the overall order, and stash the
     answer key server-side.
 
@@ -244,7 +360,13 @@ def submit_assessment(session_id: str, assessment_id: str, answers: list[dict]) 
     Side effect: writes to domain_mastery for every domain in this
     assessment via store.record_result — the SAME accumulator practice
     results write to (see record_practice_result below), so diagnostic and
-    practice accuracy blend into one number per domain.
+    practice accuracy blend into one number per domain. ALSO writes to
+    topic_progress via store.record_topic_answer, once per question, with
+    that question's EXACT correctness — the diagnostic is the one place in
+    the app with true per-question granularity (practice rounds only report
+    one aggregate score for several topics at once — see
+    record_practice_result), so it's the most precise way to build or break
+    a topic's mastery streak.
     """
     key = store.pop_pending_assessment(session_id, assessment_id)
     if key is None:
@@ -254,7 +376,6 @@ def submit_assessment(session_id: str, assessment_id: str, answers: list[dict]) 
 
     per_domain_correct: dict[str, int] = {d: 0 for d in DOMAINS}
     per_domain_total: dict[str, int] = {d: 0 for d in DOMAINS}
-    per_domain_topics: dict[str, list[str]] = {d: [] for d in DOMAINS}
     results = []
     explanations = []
 
@@ -264,7 +385,9 @@ def submit_assessment(session_id: str, assessment_id: str, answers: list[dict]) 
         is_correct = chosen == q["answerIndex"]
 
         per_domain_total[domain] += 1
-        per_domain_topics[domain].append(q["topic"])
+        # Exact per-question correctness, straight into that topic's streak
+        # — a miss here resets it to 0 even if it was previously mastered.
+        store.record_topic_answer(session_id, domain, q["topic"], is_correct)
         if is_correct:
             per_domain_correct[domain] += 1
         else:
@@ -287,10 +410,6 @@ def submit_assessment(session_id: str, assessment_id: str, answers: list[dict]) 
     for domain in DOMAINS:
         if per_domain_total[domain] > 0:
             store.record_result(session_id, domain, per_domain_correct[domain], per_domain_total[domain])
-            # Coverage is exposure-based, not correctness-based — every
-            # topic actually asked this round counts as "covered" whether
-            # the learner got it right or wrong.
-            store.mark_topics_covered(session_id, domain, per_domain_topics[domain])
 
     total_correct = sum(per_domain_correct.values())
     total_questions = sum(per_domain_total.values())
@@ -317,30 +436,29 @@ def get_progress_summary(session_id: str) -> dict:
     used by the Game Menu/weak-areas screen and by submit_assessment() and
     record_practice_result() to return fresh numbers after a write.
 
-    Each domain's masteryPct is GATED by concept coverage, not raw accuracy
-    alone:
+    Each domain's masteryPct is literally "how many of this domain's topics
+    are mastered":
 
-        masteryPct = round(accuracy_pct * coverage_fraction)
+        masteryPct = round(100 * topicsMastered / topicsTotal)
 
-    where accuracy_pct is correct/total from domain_mastery (can go up OR
-    down as the learner answers more things — see record_practice_result;
-    this is what makes it possible to LOSE progress, not just gain it) and
-    coverage_fraction is (topics quizzed at least once) / (topics that
-    exist in that domain — see knowledge_base.TOPICS_BY_DOMAIN). Coverage
-    only ever grows (store.mark_topics_covered never un-marks a topic), so
-    a domain's mastery CEILING rises monotonically as more of the knowledge
-    base gets covered, but the actual number under that ceiling still moves
-    with real performance. A domain can only ever show 100% once every one
-    of its topics has been quizzed AND every answer given was correct —
-    100% accuracy on 3 of 16 topics caps out far below 100%.
+    where a topic counts as mastered once it's been answered correctly
+    MASTERY_STREAK_THRESHOLD times IN A ROW, with no miss in between (see
+    store.record_topic_answer). A single wrong answer resets that topic's
+    streak straight to 0 no matter how high it was — that reset is the
+    entire "ability to lose progress" mechanic: a topic mastered last week
+    can genuinely un-master itself today if it's missed enough. Getting a
+    topic right once isn't enough on its own; getting it right, then wrong,
+    then right again isn't enough either — the streak has to actually reach
+    the threshold with no interruption.
 
-    overallProgress is that gated masteryPct averaged across the 3 domains,
-    weighted by DOMAIN_WEIGHTS (the real 25-30/35-40/30-35 AZ-900 exam
-    weighting, not a flat 1/3 each).
+    overallProgress is masteryPct averaged across the 3 domains, weighted
+    by DOMAIN_WEIGHTS (the real 25-30/35-40/30-35 AZ-900 exam weighting,
+    not a flat 1/3 each).
 
     Returns per-domain rows (domain, correct, total, masteryPct,
-    practiceCount, topicsCovered, topicsTotal), the weakest domain, and
-    overallProgress.
+    practiceCount, topicsCovered [attempted at least once, informational],
+    topicsMastered [streak >= threshold, drives masteryPct], topicsTotal),
+    the weakest domain, and overallProgress.
     """
     mastery = store.get_mastery(session_id)
     practice_counts = store.get_practice_counts(session_id)
@@ -349,23 +467,25 @@ def get_progress_summary(session_id: str) -> dict:
     for m in mastery:
         domain = m["domain"]
         topics_total = len(TOPICS_BY_DOMAIN[domain])
-        topics_covered = len(store.get_covered_topics(session_id, domain))
-        coverage_fraction = (topics_covered / topics_total) if topics_total else 0
-        gated_pct = round(m["masteryPct"] * coverage_fraction)
+        topics_covered = len(store.get_attempted_topics(session_id, domain))
+        topics_mastered = len(store.get_mastered_topics(session_id, domain, MASTERY_STREAK_THRESHOLD))
+        mastered_pct = round(100 * topics_mastered / topics_total) if topics_total else 0
         domains.append({
             **m,
-            "masteryPct": gated_pct,
+            "masteryPct": mastered_pct,
             "practiceCount": practice_counts.get(domain, 0),
             "topicsCovered": topics_covered,
+            "topicsMastered": topics_mastered,
             "topicsTotal": topics_total,
         })
 
     weight_sum = sum(DOMAIN_WEIGHTS[d["domain"]] for d in domains)
     avg_mastery_pct = sum(d["masteryPct"] * DOMAIN_WEIGHTS[d["domain"]] for d in domains) / weight_sum
-    # Weakest domain is picked from the GATED numbers (not raw accuracy), so
-    # a domain that's "100% right on the 2 questions I've seen" but barely
-    # covered still reads as needing attention — same untouched-first
-    # tie-break store.get_weakest_domain uses, just applied post-gating.
+    # Weakest domain is picked from masteryPct (mastered-topic fraction),
+    # not raw accuracy, so a domain that's "100% right on the 2 questions
+    # I've seen" but has nothing actually mastered yet still reads as
+    # needing attention — same untouched-first tie-break
+    # store.get_weakest_domain uses, just applied to the mastery numbers.
     weakest_domain = min(domains, key=lambda d: (d["total"] > 0, d["masteryPct"]))["domain"]
 
     return {
@@ -430,17 +550,24 @@ def record_practice_result(session_id: str, game_id: str, domain: str, correct: 
     Called when a practice game reports its real result (see PlayView.tsx's
     postMessage listener, which calls POST /api/az900/practice/result).
     Writes the score into:
-      - domain_mastery (store.record_result) — the same accumulator the
-        diagnostic uses, driving the ACCURACY half of masteryPct.
-      - topic_coverage (store.mark_topics_covered) — whichever topics
+      - domain_mastery (store.record_result) — cumulative correct/total,
+        kept for the "correct"/"total" display numbers and difficulty
+        selection (see _difficulty_for_mastery); no longer what drives
+        masteryPct/the progress bar, see get_progress_summary.
+      - topic_progress (store.record_topic_answer) — whichever topics
         generate_practice_content targeted for this specific game (stashed
         in the launched game's own payload at generation time, see
-        _pick_target_topics), driving the COVERAGE half. A game not
+        _pick_target_topics). A practice game only reports ONE aggregate
+        score for the whole round, not per-question detail, so there's no
+        way to know which of its target topics the learner actually got
+        right vs. wrong individually — instead the WHOLE round is treated
+        as a single pass/fail rep (correct/total >= PRACTICE_ROUND_PASS_FRACTION)
+        applied identically to every topic it targeted: pass = streak +1 on
+        all of them, fail = streak reset to 0 on all of them. A game not
         launched through generate_practice_content (e.g. one the chat
-        generator improvised) simply has no target topics to mark — its
-        score still counts toward accuracy, just not toward coverage, since
-        there's no reliable way to know which specific topics a freeform
-        chat-generated game actually touched.
+        generator improvised) simply has no target topics to credit — its
+        score still counts toward accuracy, just not toward any topic's
+        mastery streak.
       - practice_log (store.log_attempt) — a pure attempt-history record for
         display ("you've practiced this domain N times").
     Returns the freshly recomputed progress summary.
@@ -464,7 +591,9 @@ def record_practice_result(session_id: str, game_id: str, domain: str, correct: 
     launched = session_store.get_game(session_id, game_id)
     target_topics = (launched or {}).get("az900_topics") or []
     if target_topics:
-        store.mark_topics_covered(session_id, domain, target_topics)
+        round_passed = (correct / total) >= PRACTICE_ROUND_PASS_FRACTION
+        for topic in target_topics:
+            store.record_topic_answer(session_id, domain, topic, round_passed)
 
     return get_progress_summary(session_id)
 
@@ -480,17 +609,18 @@ def record_practice_result(session_id: str, game_id: str, domain: str, correct: 
 # How many distinct topics one practice round's content gets grounded in.
 # Tighter than "every snippet in the domain" (which could be 40+ topics) —
 # keeps the LLM's grounding focused and, more importantly, means each round
-# has a concrete, storable list of topics to credit toward coverage when the
-# real score comes back (see _pick_target_topics / record_practice_result).
+# has a concrete, storable list of topics to credit a mastery rep toward
+# when the real score comes back (see _pick_target_topics / record_practice_result).
 TOPICS_PER_PRACTICE_ROUND = 8
 
 
 def _pick_target_topics(session_id: str, domain: str, count: int = TOPICS_PER_PRACTICE_ROUND) -> list[str]:
     """Which topics THIS round of practice content should be grounded in and
-    later get coverage credit for — uncovered topics first (see
-    _topics_uncovered_first), so playing practice rounds is a real way to
-    reach full coverage, not just a way to grind accuracy on a few topics."""
-    return _topics_uncovered_first(session_id, domain)[:count]
+    later get a mastery rep credited toward — not-yet-mastered topics first
+    (see _topics_needing_practice_first), so playing practice rounds is a
+    real way to reach full mastery, not just a way to grind accuracy on a
+    few topics already mastered."""
+    return _topics_needing_practice_first(session_id, domain)[:count]
 
 
 def generate_practice_content(session_id: str, game_id: str, domain: str | None = None) -> dict:

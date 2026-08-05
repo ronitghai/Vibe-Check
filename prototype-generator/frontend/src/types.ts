@@ -25,5 +25,6 @@ export interface DomainMastery {
   masteryPct: number;
   practiceCount: number;
   topicsCovered: number;
+  topicsMastered: number;
   topicsTotal: number;
 }
